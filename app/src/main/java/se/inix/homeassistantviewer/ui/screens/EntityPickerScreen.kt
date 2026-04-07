@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
@@ -58,8 +59,8 @@ fun EntityPickerScreen(
     viewModel: EntityPickerViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
+    val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
     val connections by viewModel.connections.collectAsStateWithLifecycle()
     val selectedConnectionId by viewModel.selectedConnectionId.collectAsStateWithLifecycle()
 
@@ -103,22 +104,24 @@ fun EntityPickerScreen(
 
             // ── Search ─────────────────────────────────────────────────────────
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.searchQuery.value = it },
+                state = viewModel.searchQuery,
                 placeholder = { Text("Search by name or entity ID…") },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.searchQuery.value = "" }) {
+                    if (viewModel.searchQuery.text.isNotEmpty()) {
+                        IconButton(onClick = viewModel::clearSearch) {
                             Icon(Icons.Rounded.Close, contentDescription = "Clear search")
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                singleLine = true,
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                lineLimits = TextFieldLineLimits.SingleLine,
                 shape = MaterialTheme.shapes.extraLarge,
+                contentPadding = OutlinedTextFieldDefaults.contentPadding(
+                    top = 8.dp, bottom = 8.dp
+                ),
                 colors = OutlinedTextFieldDefaults.colors()
             )
 
@@ -181,10 +184,32 @@ fun EntityPickerScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // Favorites chip — only when at least one entity is favorited
+                            if (favCount > 0) {
+                                item {
+                                    FilterChip(
+                                        selected = showFavoritesOnly,
+                                        onClick = {
+                                            viewModel.showFavoritesOnly.value = !showFavoritesOnly
+                                        },
+                                        label = { Text("Favorites") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Rounded.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
                             item {
                                 FilterChip(
-                                    selected = categoryFilter == null,
-                                    onClick = { viewModel.categoryFilter.value = null },
+                                    selected = categoryFilter == null && !showFavoritesOnly,
+                                    onClick = {
+                                        viewModel.categoryFilter.value = null
+                                        viewModel.showFavoritesOnly.value = false
+                                    },
                                     label = { Text("All") }
                                 )
                             }
@@ -194,6 +219,7 @@ fun EntityPickerScreen(
                                     onClick = {
                                         viewModel.categoryFilter.value =
                                             if (categoryFilter == category) null else category
+                                        viewModel.showFavoritesOnly.value = false
                                     },
                                     label = { Text(domainDisplayName(category)) }
                                 )

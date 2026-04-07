@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HA Viewer"
+rootProject.name = "HomeAssistant Viewer"
 include(":app")
  

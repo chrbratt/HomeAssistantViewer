@@ -108,7 +108,7 @@ fun DashboardScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("HA Viewer") },
+                title = { Text("Home Assistant Viewer") },
                 actions = {
                     // Hide entity picker when no connections exist — there is nothing to pick from.
                     if (uiState !is DashboardUiState.NoConnections) {

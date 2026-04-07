@@ -2,6 +2,8 @@ package se.inix.homeassistantviewer.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,17 +39,19 @@ class EntityPickerViewModel(
     private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
 
-    val searchQuery = MutableStateFlow("")
+    val searchQuery = TextFieldState()
     val categoryFilter = MutableStateFlow<String?>(null) // null = All
+    val showFavoritesOnly = MutableStateFlow(false)
 
     val uiState: StateFlow<EntityPickerUiState> = combine(
         _allEntities,
-        searchQuery,
+        snapshotFlow { searchQuery.text.toString() },
         categoryFilter,
         _isLoading,
         _error,
         settingsRepository.favoriteEntities,
-        _selectedConnectionId
+        _selectedConnectionId,
+        showFavoritesOnly
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val entities = args[0] as List<HaEntityState>
@@ -57,14 +61,22 @@ class EntityPickerViewModel(
         val error = args[4] as String?
         val favorites = args[5] as List<*>
         val connId = args[6] as String
+        val favoritesOnly = args[7] as Boolean
 
         when {
             loading -> EntityPickerUiState.Loading
             error != null -> EntityPickerUiState.Error(error)
             else -> {
+                val favIds = favorites
+                    .filterIsInstance<se.inix.homeassistantviewer.data.model.FavoriteEntity>()
+                    .filter { it.connectionId == connId }
+                    .map { it.entityId }
+                    .toSet()
+
                 val filtered = entities.filter { entity ->
                     matchesSmartSearch(entity, query) &&
-                        (category == null || entity.domain == category)
+                        (category == null || entity.domain == category) &&
+                        (!favoritesOnly || entity.entityId in favIds)
                 }
                 val grouped = filtered
                     .groupBy { it.domain }
@@ -75,12 +87,6 @@ class EntityPickerViewModel(
                         if (ai != bi) ai.compareTo(bi) else a.key.compareTo(b.key)
                     })
                     .map { it.toPair() }
-
-                val favIds = favorites
-                    .filterIsInstance<se.inix.homeassistantviewer.data.model.FavoriteEntity>()
-                    .filter { it.connectionId == connId }
-                    .map { it.entityId }
-                    .toSet()
 
                 val available = entities.map { it.domain }.distinct()
                     .sortedWith(Comparator { a, b ->
@@ -108,7 +114,8 @@ class EntityPickerViewModel(
         if (_selectedConnectionId.value == connectionId) return
         _selectedConnectionId.value = connectionId
         categoryFilter.value = null
-        searchQuery.value = ""
+        searchQuery.edit { replace(0, length, "") }
+        showFavoritesOnly.value = false
         loadEntities()
     }
 
@@ -126,6 +133,10 @@ class EntityPickerViewModel(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun clearSearch() {
+        searchQuery.edit { replace(0, length, "") }
     }
 
     fun toggleFavorite(entityId: String) {

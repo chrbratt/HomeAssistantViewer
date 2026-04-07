@@ -1,4 +1,5 @@
 plugins {
+    id("base")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
@@ -14,29 +15,26 @@ android {
 
     defaultConfig {
         applicationId = "se.inix.homeassistantviewer"
-        minSdk = 35
+        minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            // R8 minification — required by Play Console, generates mapping.txt for crash analysis.
+            // R8 minification — generates mapping.txt used by Play Console for crash deobfuscation.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Full native debug symbols — generates native-debug-symbols.zip for Play Console.
-            ndk {
-                debugSymbolLevel = "FULL"
-            }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -45,6 +43,32 @@ android {
         compose = true
         buildConfig = true
     }
+}
+
+// Rename output APK/AAB: HomeAssistantViewer-v1.0.0-release.apk / .aab
+afterEvaluate {
+    configure<com.android.build.api.dsl.ApplicationExtension> {
+        val vName = defaultConfig.versionName
+        base.archivesName.set("HomeAssistantViewer-v${vName}")
+    }
+}
+
+// Create symbols.zip from merged native libs (from dependencies like OkHttp, Camera, etc.)
+// Output: app/build/outputs/symbols/symbols.zip — upload to Play Console alongside the AAB.
+val createReleaseSymbols by tasks.registering(Zip::class) {
+    group = "build"
+    description = "Package native debug symbols for Google Play Console"
+    val nativeLibsPath = layout.buildDirectory
+        .dir("intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib")
+    from(nativeLibsPath)
+    archiveFileName.set("symbols.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("outputs/symbols"))
+    onlyIf { nativeLibsPath.get().asFile.exists() }
+}
+
+// Wire symbols task to run automatically after the release bundle is built.
+afterEvaluate {
+    tasks.findByName("bundleRelease")?.finalizedBy(createReleaseSymbols)
 }
 
 dependencies {
