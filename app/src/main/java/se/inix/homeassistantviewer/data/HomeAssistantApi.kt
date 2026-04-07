@@ -25,6 +25,14 @@ interface HomeAssistantApi {
         @Body body: ServiceCallBody
     ): List<HaEntityState>
 
+    /** Generic service call with arbitrary extra data (climate, cover, fan, media_player, etc.). */
+    @POST("api/services/{domain}/{service}")
+    suspend fun callServiceWithData(
+        @Path("domain") domain: String,
+        @Path("service") service: String,
+        @Body data: Map<String, @JvmSuppressWildcards Any>
+    ): List<HaEntityState>
+
     @POST("api/services/light/turn_on")
     suspend fun turnOnLight(@Body body: LightControlBody): List<HaEntityState>
 }

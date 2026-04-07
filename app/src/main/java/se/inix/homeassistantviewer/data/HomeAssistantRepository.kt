@@ -63,4 +63,46 @@ class HomeAssistantRepository(baseUrl: String, token: String) {
     /** Turns on the light at the given brightness percentage (0–100). */
     suspend fun setLightBrightness(entityId: String, brightnessPct: Int): List<HaEntityState> =
         api.turnOnLight(LightControlBody(entityId, brightnessPct.coerceIn(0, 100)))
+
+    suspend fun setCoverPosition(entityId: String, position: Int): List<HaEntityState> =
+        api.callServiceWithData("cover", "set_cover_position",
+            mapOf("entity_id" to entityId, "position" to position.coerceIn(0, 100)))
+
+    suspend fun setClimateTemperature(entityId: String, temperature: Double): List<HaEntityState> =
+        api.callServiceWithData("climate", "set_temperature",
+            mapOf("entity_id" to entityId, "temperature" to temperature))
+
+    suspend fun setClimateHvacMode(entityId: String, mode: String): List<HaEntityState> =
+        api.callServiceWithData("climate", "set_hvac_mode",
+            mapOf("entity_id" to entityId, "hvac_mode" to mode))
+
+    suspend fun setFanPercentage(entityId: String, percentage: Int): List<HaEntityState> =
+        api.callServiceWithData("fan", "set_percentage",
+            mapOf("entity_id" to entityId, "percentage" to percentage.coerceIn(0, 100)))
+
+    suspend fun lockEntity(entityId: String): List<HaEntityState> =
+        api.callServiceWithData("lock", "lock", mapOf("entity_id" to entityId))
+
+    suspend fun unlockEntity(entityId: String): List<HaEntityState> =
+        api.callServiceWithData("lock", "unlock", mapOf("entity_id" to entityId))
+
+    suspend fun mediaPlayPause(entityId: String): List<HaEntityState> =
+        api.callServiceWithData("media_player", "media_play_pause",
+            mapOf("entity_id" to entityId))
+
+    suspend fun mediaPreviousTrack(entityId: String): List<HaEntityState> =
+        api.callServiceWithData("media_player", "media_previous_track",
+            mapOf("entity_id" to entityId))
+
+    suspend fun mediaNextTrack(entityId: String): List<HaEntityState> =
+        api.callServiceWithData("media_player", "media_next_track",
+            mapOf("entity_id" to entityId))
+
+    suspend fun setMediaVolume(entityId: String, volume: Float): List<HaEntityState> =
+        api.callServiceWithData("media_player", "volume_set",
+            mapOf("entity_id" to entityId, "volume_level" to volume.coerceIn(0f, 1f).toDouble()))
+
+    suspend fun setInputNumber(entityId: String, value: Double): List<HaEntityState> =
+        api.callServiceWithData("input_number", "set_value",
+            mapOf("entity_id" to entityId, "value" to value))
 }

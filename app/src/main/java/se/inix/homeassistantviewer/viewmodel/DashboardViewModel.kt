@@ -54,6 +54,29 @@ private sealed class InitState {
     data object Ready : InitState()
 }
 
+sealed class EntityAction {
+    abstract val connectionId: String
+    abstract val entityId: String
+
+    data class Toggle(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class SetBrightness(override val connectionId: String, override val entityId: String, val pct: Int) : EntityAction()
+    data class OpenCover(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class CloseCover(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class StopCover(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class SetCoverPosition(override val connectionId: String, override val entityId: String, val position: Int) : EntityAction()
+    data class SetClimateTemperature(override val connectionId: String, override val entityId: String, val temperature: Double) : EntityAction()
+    data class SetClimateHvacMode(override val connectionId: String, override val entityId: String, val mode: String) : EntityAction()
+    data class SetFanPercentage(override val connectionId: String, override val entityId: String, val percentage: Int) : EntityAction()
+    data class Lock(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class Unlock(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class MediaPlayPause(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class MediaPrevious(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class MediaNext(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class SetMediaVolume(override val connectionId: String, override val entityId: String, val volume: Float) : EntityAction()
+    data class Activate(override val connectionId: String, override val entityId: String) : EntityAction()
+    data class SetInputNumber(override val connectionId: String, override val entityId: String, val value: Double) : EntityAction()
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
     private val connectionPool: ConnectionPool,
@@ -284,58 +307,211 @@ class DashboardViewModel(
         }
     }
 
-    fun toggleEntity(connectionId: String, entityId: String) {
+    fun performAction(action: EntityAction) {
         viewModelScope.launch {
-            val domain = entityId.substringBefore(".")
-            if (domain != "light" && domain != "switch") return@launch
+            val connectionId = action.connectionId
+            val entityId = action.entityId
             val key = FavoriteEntity(connectionId, entityId)
-            val current = _entityStateMap.value[key] ?: return@launch
-
-            _entityStateMap.update { map ->
-                map + (key to current.copy(state = if (current.state == "on") "off" else "on"))
-            }
-
+            val current = _entityStateMap.value[key]
             val repo = connectionPool.repositoryFor(connectionId)
-            if (repo == null) {
-                // Revert — no live connection
-                _entityStateMap.update { map -> map + (key to current) }
-                return@launch
-            }
 
-            runCatching {
-                repo.callService(domain, "toggle", entityId)
-            }.onFailure { e ->
-                Log.e(TAG, "toggleEntity failed for $connectionId/$entityId", e)
-                _entityStateMap.update { map -> map + (key to current) }
-            }
-        }
-    }
+            when (action) {
+                // ── Toggle (light, switch, input_boolean, automation, fan) ────
+                is EntityAction.Toggle -> {
+                    current ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            state = if (current.state == "on") "off" else "on"
+                        ))
+                    }
+                    if (repo == null) {
+                        _entityStateMap.update { map -> map + (key to current) }
+                        return@launch
+                    }
+                    val domain = entityId.substringBefore(".")
+                    runCatching { repo.callService(domain, "toggle", entityId) }
+                        .onFailure { e ->
+                            Log.e(TAG, "Toggle failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
 
-    fun setBrightness(connectionId: String, entityId: String, brightnessPct: Int) {
-        viewModelScope.launch {
-            val key = FavoriteEntity(connectionId, entityId)
-            val current = _entityStateMap.value[key] ?: return@launch
+                // ── Light brightness ──────────────────────────────────────────
+                is EntityAction.SetBrightness -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    val raw = (action.pct / 100.0 * 255.0).toInt().coerceIn(0, 255).toDouble()
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            state = "on",
+                            attributes = (current.attributes ?: emptyMap()) +
+                                mapOf("brightness" to raw)
+                        ))
+                    }
+                    runCatching { repo.setLightBrightness(entityId, action.pct) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetBrightness failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
 
-            val repo = connectionPool.repositoryFor(connectionId)
-            if (repo == null) {
-                // No live connection — skip optimistic update entirely.
-                return@launch
-            }
+                // ── Cover ─────────────────────────────────────────────────────
+                is EntityAction.OpenCover -> {
+                    repo ?: return@launch
+                    runCatching { repo.callService("cover", "open_cover", entityId) }
+                        .onFailure { e -> Log.e(TAG, "OpenCover failed $entityId", e) }
+                }
+                is EntityAction.CloseCover -> {
+                    repo ?: return@launch
+                    runCatching { repo.callService("cover", "close_cover", entityId) }
+                        .onFailure { e -> Log.e(TAG, "CloseCover failed $entityId", e) }
+                }
+                is EntityAction.StopCover -> {
+                    repo ?: return@launch
+                    runCatching { repo.callService("cover", "stop_cover", entityId) }
+                        .onFailure { e -> Log.e(TAG, "StopCover failed $entityId", e) }
+                }
+                is EntityAction.SetCoverPosition -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            attributes = (current.attributes ?: emptyMap()) +
+                                mapOf("current_position" to action.position.toDouble())
+                        ))
+                    }
+                    runCatching { repo.setCoverPosition(entityId, action.position) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetCoverPosition failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
 
-            val brightnessRaw = (brightnessPct / 100.0 * 255.0).toInt().coerceIn(0, 255).toDouble()
-            _entityStateMap.update { map ->
-                map + (key to current.copy(
-                    state = "on",
-                    attributes = (current.attributes ?: emptyMap()) +
-                        mapOf("brightness" to brightnessRaw)
-                ))
-            }
+                // ── Climate ───────────────────────────────────────────────────
+                is EntityAction.SetClimateTemperature -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            attributes = (current.attributes ?: emptyMap()) +
+                                mapOf("temperature" to action.temperature)
+                        ))
+                    }
+                    runCatching { repo.setClimateTemperature(entityId, action.temperature) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetClimateTemp failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
+                is EntityAction.SetClimateHvacMode -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(state = action.mode))
+                    }
+                    runCatching { repo.setClimateHvacMode(entityId, action.mode) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetClimateMode failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
 
-            runCatching {
-                repo.setLightBrightness(entityId, brightnessPct)
-            }.onFailure { e ->
-                Log.e(TAG, "setBrightness failed for $connectionId/$entityId", e)
-                _entityStateMap.update { map -> map + (key to current) }
+                // ── Fan speed ─────────────────────────────────────────────────
+                is EntityAction.SetFanPercentage -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            attributes = (current.attributes ?: emptyMap()) +
+                                mapOf("percentage" to action.percentage.toDouble())
+                        ))
+                    }
+                    runCatching { repo.setFanPercentage(entityId, action.percentage) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetFanPct failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
+
+                // ── Lock ──────────────────────────────────────────────────────
+                is EntityAction.Lock -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(state = "locked"))
+                    }
+                    runCatching { repo.lockEntity(entityId) }
+                        .onFailure { e ->
+                            Log.e(TAG, "Lock failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
+                is EntityAction.Unlock -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(state = "unlocked"))
+                    }
+                    runCatching { repo.unlockEntity(entityId) }
+                        .onFailure { e ->
+                            Log.e(TAG, "Unlock failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
+
+                // ── Media player ──────────────────────────────────────────────
+                is EntityAction.MediaPlayPause -> {
+                    repo ?: return@launch
+                    runCatching { repo.mediaPlayPause(entityId) }
+                        .onFailure { e -> Log.e(TAG, "MediaPlayPause failed $entityId", e) }
+                }
+                is EntityAction.MediaPrevious -> {
+                    repo ?: return@launch
+                    runCatching { repo.mediaPreviousTrack(entityId) }
+                        .onFailure { e -> Log.e(TAG, "MediaPrev failed $entityId", e) }
+                }
+                is EntityAction.MediaNext -> {
+                    repo ?: return@launch
+                    runCatching { repo.mediaNextTrack(entityId) }
+                        .onFailure { e -> Log.e(TAG, "MediaNext failed $entityId", e) }
+                }
+                is EntityAction.SetMediaVolume -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(
+                            attributes = (current.attributes ?: emptyMap()) +
+                                mapOf("volume_level" to action.volume.toDouble())
+                        ))
+                    }
+                    runCatching { repo.setMediaVolume(entityId, action.volume) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetVolume failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
+
+                // ── Scene / Script (no optimistic update) ─────────────────────
+                is EntityAction.Activate -> {
+                    repo ?: return@launch
+                    val domain = entityId.substringBefore(".")
+                    runCatching { repo.callService(domain, "turn_on", entityId) }
+                        .onFailure { e -> Log.e(TAG, "Activate failed $entityId", e) }
+                }
+
+                // ── Input number ──────────────────────────────────────────────
+                is EntityAction.SetInputNumber -> {
+                    current ?: return@launch
+                    repo ?: return@launch
+                    _entityStateMap.update { map ->
+                        map + (key to current.copy(state = action.value.toString()))
+                    }
+                    runCatching { repo.setInputNumber(entityId, action.value) }
+                        .onFailure { e ->
+                            Log.e(TAG, "SetInputNumber failed $entityId", e)
+                            _entityStateMap.update { map -> map + (key to current) }
+                        }
+                }
             }
         }
     }
