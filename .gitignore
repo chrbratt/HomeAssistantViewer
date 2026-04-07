@@ -1,0 +1,39 @@
+# Android build outputs
+build/
+app/build/
+.gradle/
+captures/
+
+# Release artifacts — upload to Play Console manually, never commit binaries
+app/release/
+*.aab
+*.apk
+
+# Local configuration (never commit — contains SDK path)
+local.properties
+
+# Android Studio project files
+*.iml
+.idea/
+*.idea/
+
+# Keystore / signing
+*.jks
+*.keystore
+*.p12
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Profiling / test output
+*.hprof
+lint-results*
+test-results/
+
+# Input assets (screenshots, mockups etc. not needed in repo)
+input_images/
+
+# Cursor / AI agent internal files — may contain sensitive project info
+.agent/
+.cursor/
