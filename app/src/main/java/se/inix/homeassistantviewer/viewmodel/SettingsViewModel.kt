@@ -1,9 +1,9 @@
 package se.inix.homeassistantviewer.viewmodel
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.StateFlow
 import se.inix.homeassistantviewer.data.SettingsRepository
 import se.inix.homeassistantviewer.data.ThemeMode
-import kotlinx.coroutines.flow.StateFlow
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository

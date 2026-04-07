@@ -29,11 +29,8 @@ data class HaEntityState(
         get() {
             if (domain != "light") return false
             val colorModes = attributes?.get("supported_color_modes") as? List<*>
-            return if (colorModes != null) {
-                colorModes.any { it != "onoff" }
-            } else {
-                attributes?.containsKey("brightness") == true
-            }
+            return colorModes?.any { it != "onoff" }
+                ?: (attributes?.containsKey("brightness") == true)
         }
 
     /**

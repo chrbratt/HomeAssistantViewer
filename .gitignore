@@ -16,6 +16,7 @@ local.properties
 *.iml
 .idea/
 *.idea/
+xml_inspection/
 
 # Keystore / signing
 *.jks

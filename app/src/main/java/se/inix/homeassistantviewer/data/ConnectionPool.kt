@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
  * and replaces clients whose URL or token has changed.
  */
 class ConnectionPool(
-    private val settingsRepository: SettingsRepository,
+    settingsRepository: SettingsRepository,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
     data class ClientPair(

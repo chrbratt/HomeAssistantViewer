@@ -10,7 +10,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 sealed class AddressProbeResult {
-    data class Reachable(val httpCode: Int, val reasonPhrase: String) : AddressProbeResult()
+    data class Reachable(val httpCode: Int) : AddressProbeResult()
     data class Unreachable(val detail: String) : AddressProbeResult()
     data class InvalidInput(val detail: String) : AddressProbeResult()
 }
@@ -18,14 +18,12 @@ sealed class AddressProbeResult {
 sealed class ApiProbeResult {
     data object Ok : ApiProbeResult()
     data class HttpError(
-        val code: Int,
-        val reasonPhrase: String,
-        val bodySnippet: String?
+        val code: Int
     ) : ApiProbeResult()
 
     data class NetworkError(val detail: String) : ApiProbeResult()
     data class Skipped(val reason: String) : ApiProbeResult()
-    data class InvalidInput(val detail: String) : ApiProbeResult()
+    data object InvalidInput : ApiProbeResult()
 }
 
 class HomeAssistantConnectionTester(
@@ -42,13 +40,12 @@ class HomeAssistantConnectionTester(
         val request = Request.Builder()
             .url(httpUrl)
             .get()
-            .header("User-Agent", "HomeAssistantStuga/1.0")
+            .header("User-Agent", "HomeAssistantViewer/1.0")
             .build()
         try {
             client.newCall(request).execute().use { response ->
                 AddressProbeResult.Reachable(
-                    httpCode = response.code,
-                    reasonPhrase = response.message
+                    httpCode = response.code
                 )
             }
         } catch (e: IOException) {
@@ -59,7 +56,7 @@ class HomeAssistantConnectionTester(
     suspend fun probeApi(baseUrl: String, token: String): ApiProbeResult = withContext(Dispatchers.IO) {
         val trimmedUrl = baseUrl.trim()
         if (trimmedUrl.isEmpty()) {
-            return@withContext ApiProbeResult.InvalidInput("Enter a base URL")
+            return@withContext ApiProbeResult.InvalidInput
         }
         if (token.isBlank()) {
             return@withContext ApiProbeResult.Skipped("Add a token to test the API")
@@ -67,13 +64,13 @@ class HomeAssistantConnectionTester(
         // Match DynamicUrlInterceptor + Retrofit @GET("api/states"). A bare GET .../api often returns 404;
         // HA serves the REST API under /api/states, /api/services/..., etc.
         val apiUrl = mergeBaseWithPathSegments(trimmedUrl, listOf("api", "states"))
-            ?: return@withContext ApiProbeResult.InvalidInput("Invalid URL")
+            ?: return@withContext ApiProbeResult.InvalidInput
         val request = Request.Builder()
             .url(apiUrl)
             .get()
             .header("Authorization", "Bearer ${token.trim()}")
             .header("Content-Type", "application/json")
-            .header("User-Agent", "HomeAssistantStuga/1.0")
+            .header("User-Agent", "HomeAssistantViewer/1.0")
             .build()
         try {
             client.newCall(request).execute().use { response ->
@@ -86,9 +83,7 @@ class HomeAssistantConnectionTester(
                         null
                     }
                     ApiProbeResult.HttpError(
-                        code = response.code,
-                        reasonPhrase = response.message,
-                        bodySnippet = snippet
+                        code = response.code
                     )
                 }
             }

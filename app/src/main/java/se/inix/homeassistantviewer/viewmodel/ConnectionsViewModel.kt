@@ -2,17 +2,17 @@ package se.inix.homeassistantviewer.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import se.inix.homeassistantviewer.data.AddressProbeResult
-import se.inix.homeassistantviewer.data.ApiProbeResult
-import se.inix.homeassistantviewer.data.HomeAssistantConnectionTester
-import se.inix.homeassistantviewer.data.SettingsRepository
-import se.inix.homeassistantviewer.data.model.HaConnection
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import se.inix.homeassistantviewer.data.AddressProbeResult
+import se.inix.homeassistantviewer.data.ApiProbeResult
+import se.inix.homeassistantviewer.data.HomeAssistantConnectionTester
+import se.inix.homeassistantviewer.data.SettingsRepository
+import se.inix.homeassistantviewer.data.model.HaConnection
 
 class ConnectionsViewModel(
     private val settingsRepository: SettingsRepository,

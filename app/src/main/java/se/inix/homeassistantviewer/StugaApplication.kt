@@ -1,11 +1,11 @@
 package se.inix.homeassistantviewer
 
 import android.app.Application
-import se.inix.homeassistantviewer.di.AppContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import se.inix.homeassistantviewer.di.AppContainer
 
 class StugaApplication : Application() {
     lateinit var container: AppContainer

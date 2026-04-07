@@ -1,12 +1,12 @@
 package se.inix.homeassistantviewer.data
 
-import se.inix.homeassistantviewer.data.model.HaEntityState
-import se.inix.homeassistantviewer.data.model.LightControlBody
-import se.inix.homeassistantviewer.data.model.ServiceCallBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.model.LightControlBody
+import se.inix.homeassistantviewer.data.model.ServiceCallBody
 
 interface HomeAssistantApi {
 

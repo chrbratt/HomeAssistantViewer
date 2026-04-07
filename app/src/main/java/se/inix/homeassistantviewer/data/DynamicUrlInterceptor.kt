@@ -3,7 +3,6 @@ package se.inix.homeassistantviewer.data
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
-import java.io.IOException
 
 class DynamicUrlInterceptor(
     private val baseUrl: String,

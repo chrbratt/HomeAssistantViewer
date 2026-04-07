@@ -1,16 +1,18 @@
 package se.inix.homeassistantviewer.data
 
-import se.inix.homeassistantviewer.data.model.HaEntityState
-import se.inix.homeassistantviewer.data.model.LightControlBody
-import se.inix.homeassistantviewer.data.model.ServiceCallBody
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import se.inix.homeassistantviewer.BuildConfig
+import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.model.LightControlBody
+import se.inix.homeassistantviewer.data.model.ServiceCallBody
 
 class HomeAssistantRepository(baseUrl: String, token: String) {
 
@@ -18,7 +20,8 @@ class HomeAssistantRepository(baseUrl: String, token: String) {
 
     init {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
+                    else HttpLoggingInterceptor.Level.NONE
         }
 
         val okHttpClient = OkHttpClient.Builder()
@@ -50,7 +53,7 @@ class HomeAssistantRepository(baseUrl: String, token: String) {
         return coroutineScope {
             entityIds.map { entityId ->
                 async { runCatching { api.getState(entityId) }.getOrNull() }
-            }.map { it.await() }.filterNotNull()
+            }.awaitAll().filterNotNull()
         }
     }
 

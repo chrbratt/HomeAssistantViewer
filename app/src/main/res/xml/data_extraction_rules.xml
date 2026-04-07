@@ -1,19 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
-    <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
-    </cloud-backup>
     <!--
-    <device-transfer>
-        <include .../>
-        <exclude .../>
-    </device-transfer>
+        Exclude EncryptedSharedPreferences for connections from cloud backup.
+        The Keystore key is device-bound — backed-up credentials cannot be decrypted
+        on another device, causing silent data loss on device restore.
     -->
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secure_connections.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="secure_connections.xml" />
+    </device-transfer>
 </data-extraction-rules>

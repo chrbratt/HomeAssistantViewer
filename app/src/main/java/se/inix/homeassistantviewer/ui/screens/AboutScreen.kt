@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import se.inix.homeassistantviewer.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,11 +84,11 @@ fun AboutScreen(
                     }
                 }
                 Text(
-                    "HA Viewer",
+                    "Home Assistant Viewer",
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
-                    "Version 1.0",
+                    "Version ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

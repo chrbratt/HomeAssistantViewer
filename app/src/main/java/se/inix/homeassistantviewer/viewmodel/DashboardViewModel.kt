@@ -3,11 +3,6 @@ package se.inix.homeassistantviewer.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import se.inix.homeassistantviewer.data.ConnectionPool
-import se.inix.homeassistantviewer.data.ConnectionState
-import se.inix.homeassistantviewer.data.SettingsRepository
-import se.inix.homeassistantviewer.data.model.FavoriteEntity
-import se.inix.homeassistantviewer.data.model.HaEntityState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -27,6 +22,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import se.inix.homeassistantviewer.data.ConnectionPool
+import se.inix.homeassistantviewer.data.ConnectionState
+import se.inix.homeassistantviewer.data.SettingsRepository
+import se.inix.homeassistantviewer.data.model.FavoriteEntity
+import se.inix.homeassistantviewer.data.model.HaEntityState
 
 /**
  * An entity on the dashboard.
@@ -99,7 +99,7 @@ class DashboardViewModel(
      */
     val connectionState: StateFlow<ConnectionState> = connectionPool.clients
         .flatMapLatest { clients ->
-            if (clients.isEmpty()) return@flatMapLatest flowOf<ConnectionState>(ConnectionState.Disconnected())
+            if (clients.isEmpty()) return@flatMapLatest flowOf<ConnectionState>(ConnectionState.Disconnected)
             channelFlow {
                 val perConnectionState = mutableMapOf<String, ConnectionState>()
                 clients.forEach { (connId, pair) ->
@@ -112,7 +112,7 @@ class DashboardViewModel(
                 }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConnectionState.Disconnected())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConnectionState.Disconnected)
 
     init {
         observePoolReadiness()
@@ -316,6 +316,12 @@ class DashboardViewModel(
             val key = FavoriteEntity(connectionId, entityId)
             val current = _entityStateMap.value[key] ?: return@launch
 
+            val repo = connectionPool.repositoryFor(connectionId)
+            if (repo == null) {
+                // No live connection — skip optimistic update entirely.
+                return@launch
+            }
+
             val brightnessRaw = (brightnessPct / 100.0 * 255.0).toInt().coerceIn(0, 255).toDouble()
             _entityStateMap.update { map ->
                 map + (key to current.copy(
@@ -326,8 +332,7 @@ class DashboardViewModel(
             }
 
             runCatching {
-                connectionPool.repositoryFor(connectionId)
-                    ?.setLightBrightness(entityId, brightnessPct)
+                repo.setLightBrightness(entityId, brightnessPct)
             }.onFailure { e ->
                 Log.e(TAG, "setBrightness failed for $connectionId/$entityId", e)
                 _entityStateMap.update { map -> map + (key to current) }
@@ -339,11 +344,11 @@ class DashboardViewModel(
         private const val TAG = "DashboardViewModel"
 
         private fun aggregateStates(states: Collection<ConnectionState>): ConnectionState = when {
-            states.isEmpty() -> ConnectionState.Disconnected()
+            states.isEmpty() -> ConnectionState.Disconnected
             states.all { it is ConnectionState.Connected } -> ConnectionState.Connected
             states.any { it is ConnectionState.AuthFailed } -> ConnectionState.AuthFailed
             states.any { it is ConnectionState.Connecting } -> ConnectionState.Connecting
-            else -> ConnectionState.Disconnected()
+            else -> ConnectionState.Disconnected
         }
     }
 }

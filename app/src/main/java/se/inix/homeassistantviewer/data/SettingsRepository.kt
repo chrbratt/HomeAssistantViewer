@@ -18,8 +18,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import se.inix.homeassistantviewer.data.model.FavoriteEntity
-import se.inix.homeassistantviewer.data.model.HaConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,6 +28,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import se.inix.homeassistantviewer.data.SettingsRepository.Companion.DS_MIGRATED
+import se.inix.homeassistantviewer.data.model.FavoriteEntity
+import se.inix.homeassistantviewer.data.model.HaConnection
 import java.util.UUID
 
 /** Controls which colour scheme the app uses, independently of the system setting. */

@@ -2,16 +2,16 @@ package se.inix.homeassistantviewer.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import se.inix.homeassistantviewer.data.ConnectionPool
-import se.inix.homeassistantviewer.data.SettingsRepository
-import se.inix.homeassistantviewer.data.model.HaConnection
-import se.inix.homeassistantviewer.data.model.HaEntityState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import se.inix.homeassistantviewer.data.ConnectionPool
+import se.inix.homeassistantviewer.data.SettingsRepository
+import se.inix.homeassistantviewer.data.model.HaConnection
+import se.inix.homeassistantviewer.data.model.HaEntityState
 
 sealed class EntityPickerUiState {
     data object Loading : EntityPickerUiState()

@@ -1,7 +1,6 @@
 package se.inix.homeassistantviewer.data
 
 import android.util.Log
-import se.inix.homeassistantviewer.data.model.HaEntityState
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -23,6 +22,8 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
+import se.inix.homeassistantviewer.BuildConfig
+import se.inix.homeassistantviewer.data.model.HaEntityState
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -30,7 +31,7 @@ sealed class ConnectionState {
     data object Connecting : ConnectionState()
     data object Connected : ConnectionState()
     data object AuthFailed : ConnectionState()
-    data class Disconnected(val reason: String? = null) : ConnectionState()
+    data object Disconnected : ConnectionState()
 }
 
 /**
@@ -63,7 +64,7 @@ class HaWebSocketClient(
     private val _stateChanges = MutableSharedFlow<HaEntityState>(extraBufferCapacity = 64)
     val stateChanges: SharedFlow<HaEntityState> = _stateChanges.asSharedFlow()
 
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     // Must be declared before init so it is non-null when connect() is called.
@@ -74,7 +75,7 @@ class HaWebSocketClient(
             scheduleReconnect(t.message)
         }
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "[$connectionId] Closed: $code $reason")
+            if (BuildConfig.DEBUG) Log.d(TAG, "[$connectionId] Closed: $code $reason")
             if (code != CLOSE_NORMAL) scheduleReconnect(reason)
         }
     }
@@ -94,7 +95,7 @@ class HaWebSocketClient(
     }
 
     private fun connect() {
-        Log.d(TAG, "[$connectionId] Connecting to ${toWsUrl(baseUrl)}")
+        if (BuildConfig.DEBUG) Log.d(TAG, "[$connectionId] Connecting to ${toWsUrl(baseUrl)}")
         _connectionState.value = ConnectionState.Connecting
         webSocket = okHttpClient.newWebSocket(
             Request.Builder().url(toWsUrl(baseUrl)).build(),
@@ -107,15 +108,15 @@ class HaWebSocketClient(
         reconnectJob = null
         webSocket?.close(CLOSE_NORMAL, "disconnect")
         webSocket = null
-        _connectionState.value = ConnectionState.Disconnected()
+        _connectionState.value = ConnectionState.Disconnected
     }
 
     private fun scheduleReconnect(reason: String? = null) {
         if (_connectionState.value is ConnectionState.AuthFailed) return
-        _connectionState.value = ConnectionState.Disconnected(reason)
+        _connectionState.value = ConnectionState.Disconnected
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            Log.d(TAG, "[$connectionId] Reconnecting in ${backoffMs}ms")
+            if (BuildConfig.DEBUG) Log.d(TAG, "[$connectionId] Reconnecting in ${backoffMs}ms")
             delay(backoffMs)
             backoffMs = (backoffMs * 2).coerceAtMost(MAX_BACKOFF_MS)
             connect()
@@ -130,7 +131,7 @@ class HaWebSocketClient(
                     JSONObject().put("type", "auth").put("access_token", token).toString()
                 )
                 "auth_ok" -> {
-                    Log.d(TAG, "[$connectionId] Auth ok — subscribing")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "[$connectionId] Auth ok — subscribing")
                     backoffMs = INITIAL_BACKOFF_MS
                     _connectionState.value = ConnectionState.Connected
                     socket.send(
