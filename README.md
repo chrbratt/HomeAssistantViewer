@@ -6,6 +6,16 @@ A lightweight Android companion app for [Home Assistant](https://www.home-assist
 
 **Created by C Bratt · [inix.se](http://inix.se)**
 
+<p align="center">
+  <img src="docs/feature_graphic.png" alt="Home Assistant Viewer" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/screenshot_dashboard.jpg" width="270" alt="Dashboard">
+  <img src="docs/screenshots/screenshot_favorites.jpg" width="270" alt="Manage Favorites">
+  <img src="docs/screenshots/screenshot_settings.jpg" width="270" alt="Settings">
+</p>
+
 ---
 
 ## Features
@@ -52,7 +62,7 @@ ui/screens/
 
 1. Clone the repository
 2. Open in Android Studio
-3. Run on a device or emulator (API 35+)
+3. Run on a device or emulator (API 26+)
 4. Go to **Settings → Connections → +** and enter your Home Assistant base URL and a Long-Lived Access Token
 5. Tap the ★ icon on the dashboard to select which entities to show
 
