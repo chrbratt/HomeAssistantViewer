@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +30,7 @@ import se.inix.homeassistantviewer.ui.dashboard.components.DashboardStatusBanner
 import se.inix.homeassistantviewer.ui.dashboard.components.NoConnectionsEmpty
 import se.inix.homeassistantviewer.ui.dashboard.components.NoFavoritesEmpty
 import se.inix.homeassistantviewer.ui.dashboard.components.RemoveItemDialog
+import se.inix.homeassistantviewer.ui.dashboard.components.SettingsHealthBadge
 
 /**
  * The dashboard is intentionally a thin orchestrator:
@@ -57,16 +57,17 @@ fun DashboardScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Home Assistant Viewer") },
+                title = { Text("HA Viewer") },
                 actions = {
                     if (uiState !is DashboardUiState.NoConnections) {
                         IconButton(onClick = onNavigateToEntityPicker) {
                             Icon(Icons.Rounded.Star, contentDescription = "Manage favorites")
                         }
                     }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Rounded.Settings, contentDescription = "Settings")
-                    }
+                    SettingsHealthBadge(
+                        health = statusBar.toConnectionHealth(),
+                        onClick = onNavigateToSettings
+                    )
                 }
             )
         }
