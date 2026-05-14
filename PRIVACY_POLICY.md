@@ -1,4 +1,4 @@
-# Privacy Policy — Home Assistant Viewer
+# Privacy Policy — HA Viewer
 
 **Effective date:** 2025-01-01
 **Developer:** C Bratt — [inix.se](http://inix.se)
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Home Assistant Viewer is a companion app for Home Assistant. This policy explains what data the app handles, where it is stored, and what is never collected.
+HA Viewer is a companion app for Home Assistant. This policy explains what data the app handles, where it is stored, and what is never collected.
 
 The short version: **all data stays on your device and your own server. Nothing is sent anywhere else.**
 
