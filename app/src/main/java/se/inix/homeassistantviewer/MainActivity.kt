@@ -18,6 +18,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.lifecycle.SavedStateHandle
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.map
+import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 import se.inix.homeassistantviewer.ui.about.AboutScreen
@@ -112,6 +114,7 @@ fun StugaApp() {
             // Vico) is paid for on the dashboard path.
             val viewModel: EntityDetailViewModel = viewModel(factory = viewModelFactory {
                 initializer {
+                    val repo = container.settingsRepository
                     EntityDetailViewModel(
                         savedStateHandle = SavedStateHandle(
                             mapOf(
@@ -119,7 +122,19 @@ fun StugaApp() {
                                 EntityDetailViewModel.ARG_ENTITY_ID to entityId
                             )
                         ),
-                        dataSource = ConnectionPoolDataSource(container.connectionPool, connectionId)
+                        dataSource = ConnectionPoolDataSource(container.connectionPool, connectionId),
+                        customNameSource = repo.favorites.map { favs ->
+                            favs
+                                .filterIsInstance<FavoriteItem.Entity>()
+                                .firstOrNull {
+                                    it.connectionId == connectionId &&
+                                        it.entityId == entityId
+                                }
+                                ?.customName
+                        },
+                        saveCustomName = { name ->
+                            repo.setFavoriteCustomName(connectionId, entityId, name)
+                        }
                     )
                 }
             })

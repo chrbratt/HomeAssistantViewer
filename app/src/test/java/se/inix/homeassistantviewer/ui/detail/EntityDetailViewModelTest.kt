@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -12,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -279,5 +282,69 @@ class EntityDetailViewModelTest {
                 "expected Empty for all-unavailable series, was ${vm.uiState.value}",
                 vm.uiState.value is EntityDetailUiState.Empty
             )
+        }
+
+    @Test
+    fun `customName mirrors the source flow`() = runTest(testDispatcher) {
+        val ds = FakeDataSource()
+        val source = MutableStateFlow<String?>("Kitchen lamp")
+        val vm = EntityDetailViewModel(
+            savedStateHandle = handle(),
+            dataSource = ds,
+            customNameSource = source
+        )
+        // VM uses `stateIn(WhileSubscribed)`, so we need an active subscriber
+        // to mirror what `collectAsStateWithLifecycle` does in production.
+        val collector = launch { vm.customName.collect {} }
+        advanceUntilIdle()
+        assertEquals("Kitchen lamp", vm.customName.value)
+
+        source.value = "Counter light"
+        advanceUntilIdle()
+        assertEquals("Counter light", vm.customName.value)
+
+        source.value = null
+        advanceUntilIdle()
+        assertNull(vm.customName.value)
+        collector.cancel()
+    }
+
+    @Test
+    fun `setCustomName trims whitespace and persists a non-blank name`() =
+        runTest(testDispatcher) {
+            val ds = FakeDataSource()
+            var saved: String? = "untouched"
+            val vm = EntityDetailViewModel(
+                savedStateHandle = handle(),
+                dataSource = ds,
+                saveCustomName = { saved = it }
+            )
+
+            vm.setCustomName("   Hallway light   ")
+
+            assertEquals("Hallway light", saved)
+        }
+
+    @Test
+    fun `setCustomName persists null for blank or whitespace-only input`() =
+        runTest(testDispatcher) {
+            val ds = FakeDataSource()
+            var saved: String? = "untouched"
+            val vm = EntityDetailViewModel(
+                savedStateHandle = handle(),
+                dataSource = ds,
+                saveCustomName = { saved = it }
+            )
+
+            vm.setCustomName("")
+            assertNull("empty string should clear", saved)
+
+            saved = "untouched"
+            vm.setCustomName("   ")
+            assertNull("whitespace-only should clear", saved)
+
+            saved = "untouched"
+            vm.setCustomName(null)
+            assertNull("null should clear", saved)
         }
 }

@@ -6,9 +6,13 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.domain.history.HistoryPoint
@@ -35,7 +39,9 @@ import java.time.Instant
 internal class EntityDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val dataSource: EntityHistoryDataSource,
-    private val now: () -> Instant = Instant::now
+    private val now: () -> Instant = Instant::now,
+    customNameSource: Flow<String?> = flowOf(null),
+    private val saveCustomName: (String?) -> Unit = {}
 ) : ViewModel() {
 
     val entityId: String = requireNotNull(savedStateHandle[ARG_ENTITY_ID]) {
@@ -47,6 +53,25 @@ internal class EntityDetailViewModel(
 
     private val _uiState = MutableStateFlow<EntityDetailUiState>(EntityDetailUiState.Loading)
     val uiState: StateFlow<EntityDetailUiState> = _uiState.asStateFlow()
+
+    /**
+     * The user-defined display name for this entity (or `null` if none set).
+     *
+     * Read live from whatever source the caller wires in (in production:
+     * `SettingsRepository.favorites` filtered to this entity) so renaming
+     * from this screen is reflected immediately, and so any other surface
+     * editing the same favorite stays in sync.
+     */
+    val customName: StateFlow<String?> = customNameSource
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Persist a new display name (or clear it if [name] is null/blank).
+     * Whitespace-only is treated as "clear".
+     */
+    fun setCustomName(name: String?) {
+        saveCustomName(name?.trim()?.takeIf { it.isNotEmpty() })
+    }
 
     /**
      * Per-range cache so flipping between 1h/24h/7d doesn't cause repeated

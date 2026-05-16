@@ -3,8 +3,6 @@ package se.inix.homeassistantviewer.ui.detail.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,9 +106,12 @@ internal fun BinaryStateTimeline(
     }
 
     Canvas(
+        // Sizing is the caller's responsibility — the detail screen makes
+        // the chart fill the available space in portrait and switch to a
+        // side-by-side layout in landscape. Keeping the chart agnostic of
+        // its own height means it composes equally well at 140 dp on a
+        // small phone or 500 dp on a tablet.
         modifier = modifier
-            .fillMaxWidth()
-            .height(140.dp)
             // Double-tap → restore the full data window. Sits before the
             // transform detector so quick double-taps win the race.
             .pointerInput(window) {

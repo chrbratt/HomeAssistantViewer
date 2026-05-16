@@ -1,13 +1,10 @@
 package se.inix.homeassistantviewer.ui.detail.components
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
@@ -110,9 +107,10 @@ private fun NumericHistoryChart(
             )
         ),
         modelProducer = modelProducer,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(260.dp),
+        // Sizing comes from the caller; the detail screen stretches the
+        // chart to fill the available space in portrait and switches to a
+        // side-by-side layout in landscape.
+        modifier = modifier,
         scrollState = rememberVicoScrollState(),
         zoomState = rememberVicoZoomState(
             zoomEnabled = true,

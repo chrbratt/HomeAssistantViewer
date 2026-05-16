@@ -52,7 +52,7 @@ internal fun ClimateCard(
     }
 
     DashboardCardShell(
-        title = entity.friendlyName ?: entity.entityId,
+        title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
         onOpenDetail = onOpenDetail

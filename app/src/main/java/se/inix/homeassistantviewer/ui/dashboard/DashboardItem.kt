@@ -6,15 +6,24 @@ import se.inix.homeassistantviewer.data.model.HaEntityState
 sealed class DashboardItem {
     abstract val key: String
 
+    /**
+     * @param customName user-given display name overriding HA's `friendly_name`.
+     *                   See [se.inix.homeassistantviewer.data.model.FavoriteItem.Entity].
+     */
     data class Entity(
         val connectionId: String,
         val entityId: String,
-        val entity: HaEntityState?
+        val entity: HaEntityState?,
+        val customName: String? = null
     ) : DashboardItem() {
         override val key: String get() = "e:$connectionId/$entityId"
     }
 
-    data class Divider(val id: String) : DashboardItem() {
+    /** @param title optional section heading rendered on the divider line. */
+    data class Divider(
+        val id: String,
+        val title: String? = null
+    ) : DashboardItem() {
         override val key: String get() = "d:$id"
     }
 }

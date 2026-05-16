@@ -40,6 +40,7 @@ fun DashboardGrid(
     onAction: (EntityAction) -> Unit,
     onSaveOrder: (List<DashboardItem>) -> Unit,
     onRequestRemove: (DashboardItem) -> Unit,
+    onRequestRename: (DashboardItem) -> Unit,
     onOpenDetail: (connectionId: String, entityId: String) -> Unit
 ) {
     val lazyGridState = rememberLazyStaggeredGridState()
@@ -92,13 +93,16 @@ fun DashboardGrid(
 
                 when (item) {
                     is DashboardItem.Divider -> RowBreakDivider(
+                        title = item.title,
                         modifier = dragModifier,
+                        onEditTitle = { onRequestRename(item) },
                         onRemove = { onRequestRemove(item) }
                     )
                     is DashboardItem.Entity -> EntityCard(
                         item = item,
                         onAction = onAction,
                         onRequestRemove = { onRequestRemove(item) },
+                        onRequestRename = { onRequestRename(item) },
                         onOpenDetail = onOpenDetail,
                         modifier = dragModifier
                     )

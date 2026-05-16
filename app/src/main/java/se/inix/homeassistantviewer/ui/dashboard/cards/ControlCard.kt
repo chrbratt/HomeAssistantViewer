@@ -61,7 +61,7 @@ internal fun ControlCard(
     }
 
     DashboardCardShell(
-        title = entity.friendlyName ?: entity.entityId,
+        title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
         onClick = { onAction(EntityAction.Toggle(item.connectionId, item.entityId)) },

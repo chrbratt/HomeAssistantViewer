@@ -25,7 +25,8 @@ import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 internal fun ActivateCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRequestRename: (() -> Unit)? = null
 ) {
     val entity = item.entity ?: return
     val domain = entity.domain
@@ -41,10 +42,11 @@ internal fun ActivateCard(
     val colors = rememberCardColors(active = false, animationLabel = "activateCardBg")
 
     DashboardCardShell(
-        title = entity.friendlyName ?: entity.entityId,
+        title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
-        onClick = { onAction(action) }
+        onClick = { onAction(action) },
+        onRequestRename = onRequestRename
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

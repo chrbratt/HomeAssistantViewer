@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import se.inix.homeassistantviewer.R
 import se.inix.homeassistantviewer.di.AppViewModelProvider
+import se.inix.homeassistantviewer.ui.common.EditTextDialog
 import se.inix.homeassistantviewer.ui.dashboard.components.DashboardErrorView
 import se.inix.homeassistantviewer.ui.dashboard.components.DashboardGrid
 import se.inix.homeassistantviewer.ui.dashboard.components.DashboardStatusBanner
@@ -60,6 +61,7 @@ fun DashboardScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
     var pendingRemoval by remember { mutableStateOf<DashboardItem?>(null) }
+    var pendingRename by remember { mutableStateOf<DashboardItem?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -130,6 +132,7 @@ fun DashboardScreen(
                             onAction = viewModel::performAction,
                             onSaveOrder = viewModel::saveItemOrder,
                             onRequestRemove = { pendingRemoval = it },
+                            onRequestRename = { pendingRename = it },
                             onOpenDetail = onNavigateToEntityDetail
                         )
                     }
@@ -147,5 +150,38 @@ fun DashboardScreen(
             },
             onDismiss = { pendingRemoval = null }
         )
+    }
+
+    pendingRename?.let { item ->
+        when (item) {
+            is DashboardItem.Entity -> EditTextDialog(
+                title = "Rename favorite",
+                label = "Display name",
+                // Pre-fill with whatever the user currently sees on the card —
+                // tweaking is the common case, starting from blank would force
+                // the user to retype the existing name on a small change.
+                initialValue = item.customName ?: item.entity?.friendlyName.orEmpty(),
+                placeholder = item.entity?.friendlyName ?: item.entityId,
+                supportingText = "Leave empty to use the Home Assistant name " +
+                    "(\"${item.entity?.friendlyName ?: item.entityId}\").",
+                onConfirm = { name ->
+                    viewModel.setEntityCustomName(item.connectionId, item.entityId, name)
+                    pendingRename = null
+                },
+                onDismiss = { pendingRename = null }
+            )
+            is DashboardItem.Divider -> EditTextDialog(
+                title = "Section title",
+                label = "Title",
+                initialValue = item.title.orEmpty(),
+                placeholder = "e.g. Living room",
+                supportingText = "Leave empty for a plain line.",
+                onConfirm = { title ->
+                    viewModel.setDividerTitle(item.id, title)
+                    pendingRename = null
+                },
+                onDismiss = { pendingRename = null }
+            )
+        }
     }
 }

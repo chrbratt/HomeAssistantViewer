@@ -89,9 +89,10 @@ class DashboardViewModel(
                         is FavoriteItem.Entity -> DashboardItem.Entity(
                             connectionId = fav.connectionId,
                             entityId = fav.entityId,
-                            entity = stateMap[EntityKey(fav.connectionId, fav.entityId)]
+                            entity = stateMap[EntityKey(fav.connectionId, fav.entityId)],
+                            customName = fav.customName
                         )
-                        is FavoriteItem.Divider -> DashboardItem.Divider(fav.id)
+                        is FavoriteItem.Divider -> DashboardItem.Divider(fav.id, fav.title)
                     }
                 }
             )
@@ -156,17 +157,26 @@ class DashboardViewModel(
     }
 
     fun saveItemOrder(ordered: List<DashboardItem>) {
+        // Preserve every per-item user customisation when persisting the
+        // new order — losing the customName / title on a reorder would
+        // be a silent data-loss bug.
         settingsRepository.saveFavoriteOrder(
             ordered.map { item ->
                 when (item) {
-                    is DashboardItem.Entity -> FavoriteItem.Entity(item.connectionId, item.entityId)
-                    is DashboardItem.Divider -> FavoriteItem.Divider(item.id)
+                    is DashboardItem.Entity -> FavoriteItem.Entity(
+                        connectionId = item.connectionId,
+                        entityId = item.entityId,
+                        customName = item.customName
+                    )
+                    is DashboardItem.Divider -> FavoriteItem.Divider(item.id, item.title)
                 }
             }
         )
     }
 
     fun removeItem(item: DashboardItem) {
+        // Match by key in the store; the customName / title don't need to
+        // be threaded through here.
         val target: FavoriteItem = when (item) {
             is DashboardItem.Entity -> FavoriteItem.Entity(item.connectionId, item.entityId)
             is DashboardItem.Divider -> FavoriteItem.Divider(item.id)
@@ -176,6 +186,14 @@ class DashboardViewModel(
 
     fun addDivider() {
         settingsRepository.addDivider()
+    }
+
+    fun setEntityCustomName(connectionId: String, entityId: String, name: String?) {
+        settingsRepository.setFavoriteCustomName(connectionId, entityId, name)
+    }
+
+    fun setDividerTitle(id: String, title: String?) {
+        settingsRepository.setDividerTitle(id, title)
     }
 
     fun performAction(action: EntityAction) {

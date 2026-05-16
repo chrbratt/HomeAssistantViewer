@@ -82,6 +82,14 @@ class SettingsRepository(context: Context) {
 
     fun saveFavoriteOrder(ordered: List<FavoriteItem>) = favoritesStore.saveOrder(ordered)
 
+    /** Renames a favourited entity. Pass `null` (or blank) to fall back to HA's `friendly_name`. */
+    fun setFavoriteCustomName(connectionId: String, entityId: String, name: String?) =
+        favoritesStore.setEntityCustomName(connectionId, entityId, name)
+
+    /** Sets a divider's section heading. Pass `null` (or blank) to remove the heading. */
+    fun setDividerTitle(id: String, title: String?) =
+        favoritesStore.setDividerTitle(id, title)
+
     fun saveDashboardColumns(columns: Int) = dashboardPrefsStore.saveColumns(columns)
 
     fun saveThemeMode(mode: ThemeMode) = dashboardPrefsStore.saveThemeMode(mode)

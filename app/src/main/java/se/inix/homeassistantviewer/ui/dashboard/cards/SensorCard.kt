@@ -10,20 +10,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.ui.common.BinaryStateIndicator
 import se.inix.homeassistantviewer.ui.common.NumericValueDisplay
 import se.inix.homeassistantviewer.ui.common.formatSensorValue
 import se.inix.homeassistantviewer.ui.common.getIconForEntity
 import se.inix.homeassistantviewer.ui.common.sensorIconTint
+import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
 
 /** Read-only display card for sensors and anything else without a control affordance. */
 @Composable
 internal fun SensorCard(
-    entity: HaEntityState,
+    item: DashboardItem.Entity,
     modifier: Modifier = Modifier,
     onOpenDetail: (() -> Unit)? = null
 ) {
+    val entity = item.entity ?: return
     val icon = getIconForEntity(entity)
     val iconTint = sensorIconTint(entity)
     val unit = entity.unitOfMeasurement
@@ -32,7 +33,7 @@ internal fun SensorCard(
     val colors = rememberCardColors(active = false, animationLabel = "sensorCardBg")
 
     DashboardCardShell(
-        title = entity.friendlyName ?: entity.entityId,
+        title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
         onOpenDetail = onOpenDetail

@@ -35,8 +35,16 @@ import androidx.compose.ui.unit.dp
 internal fun UnavailableEntityCard(
     entityId: String,
     onRequestRemove: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customName: String? = null
 ) {
+    // Honour a user-set name even when the entity itself can't be loaded —
+    // it's the name the user knows it by. Falls back to a humanised
+    // entity-id form ("light.living_room" → "Living room") as before.
+    val displayName = customName?.takeUnless { it.isBlank() }
+        ?: entityId.substringAfterLast(".")
+            .replace("_", " ")
+            .replaceFirstChar { it.uppercase() }
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -58,8 +66,7 @@ internal fun UnavailableEntityCard(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = entityId.substringAfterLast(".").replace("_", " ")
-                        .replaceFirstChar { it.uppercase() },
+                    text = displayName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     maxLines = 1,

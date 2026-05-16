@@ -9,12 +9,18 @@ import se.inix.homeassistantviewer.ui.dashboard.EntityAction
  * Pure dispatcher that picks the right card for a dashboard entity based on
  * its domain. Cards live in this same package and are package-internal so
  * the dispatcher stays the single entry point.
+ *
+ * **Where renaming lives:** for cards that have a detail screen (everything
+ * with a history graph), renaming is exposed inside that screen — keeping
+ * the dashboard cards uncluttered. Scripts / scenes / automations have no
+ * detail screen, so they keep their on-card rename pencil.
  */
 @Composable
 fun EntityCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     onRequestRemove: () -> Unit,
+    onRequestRename: () -> Unit,
     onOpenDetail: (connectionId: String, entityId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -22,6 +28,7 @@ fun EntityCard(
     if (entity == null) {
         UnavailableEntityCard(
             entityId = item.entityId,
+            customName = item.customName,
             onRequestRemove = onRequestRemove,
             modifier = modifier
         )
@@ -53,9 +60,13 @@ fun EntityCard(
         // an automation in HA flips its enabled state — almost never what the
         // user actually wants on a dashboard, so we use automation.trigger via
         // the Run button instead.
+        //
+        // No detail screen exists for these (nothing useful to chart), so the
+        // rename pencil lives directly on the card — it's the only management
+        // surface they have.
         "scene", "script", "automation" ->
-            ActivateCard(item = item, onAction = onAction, modifier = modifier)
+            ActivateCard(item = item, onAction = onAction, onRequestRename = onRequestRename, modifier = modifier)
         else ->
-            SensorCard(entity = entity, onOpenDetail = openDetail, modifier = modifier)
+            SensorCard(item = item, onOpenDetail = openDetail, modifier = modifier)
     }
 }

@@ -32,15 +32,26 @@ internal fun DashboardCardShell(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onOpenDetail: (() -> Unit)? = null,
+    onRequestRename: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    // Build a single trailing slot that holds zero, one or both action
+    // icons. Keeping the composition here means each domain card just
+    // passes the two callbacks and never has to lay out its own icons.
+    val trailing: (@Composable () -> Unit)? =
+        if (onOpenDetail == null && onRequestRename == null) null
+        else { ->
+            CardHeaderActions(
+                tint = colors.onContainer,
+                onRequestRename = onRequestRename,
+                onOpenDetail = onOpenDetail
+            )
+        }
     val body: @Composable ColumnScope.() -> Unit = {
         CardHeader(
             title = title,
             color = colors.onContainer,
-            trailing = onOpenDetail?.let { open ->
-                { CardHistoryAction(tint = colors.onContainer, onClick = open) }
-            }
+            trailing = trailing
         )
         content()
     }
