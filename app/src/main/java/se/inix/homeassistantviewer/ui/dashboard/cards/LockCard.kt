@@ -23,7 +23,8 @@ import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 internal fun LockCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenDetail: (() -> Unit)? = null
 ) {
     val entity = item.entity ?: return
     val isLocked = entity.state == "locked"
@@ -45,7 +46,8 @@ internal fun LockCard(
         title = entity.friendlyName ?: entity.entityId,
         colors = colors,
         modifier = modifier,
-        onClick = toggle
+        onClick = toggle,
+        onOpenDetail = onOpenDetail
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

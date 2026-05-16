@@ -33,7 +33,8 @@ import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 internal fun ControlCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenDetail: (() -> Unit)? = null
 ) {
     val entity = item.entity ?: return
     val isOn = entity.state == "on"
@@ -63,7 +64,8 @@ internal fun ControlCard(
         title = entity.friendlyName ?: entity.entityId,
         colors = colors,
         modifier = modifier,
-        onClick = { onAction(EntityAction.Toggle(item.connectionId, item.entityId)) }
+        onClick = { onAction(EntityAction.Toggle(item.connectionId, item.entityId)) },
+        onOpenDetail = onOpenDetail
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

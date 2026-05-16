@@ -39,7 +39,8 @@ fun DashboardGrid(
     columns: Int,
     onAction: (EntityAction) -> Unit,
     onSaveOrder: (List<DashboardItem>) -> Unit,
-    onRequestRemove: (DashboardItem) -> Unit
+    onRequestRemove: (DashboardItem) -> Unit,
+    onOpenDetail: (connectionId: String, entityId: String) -> Unit
 ) {
     val lazyGridState = rememberLazyStaggeredGridState()
     var localItems by remember { mutableStateOf(items) }
@@ -98,6 +99,7 @@ fun DashboardGrid(
                         item = item,
                         onAction = onAction,
                         onRequestRemove = { onRequestRemove(item) },
+                        onOpenDetail = onOpenDetail,
                         modifier = dragModifier
                     )
                 }

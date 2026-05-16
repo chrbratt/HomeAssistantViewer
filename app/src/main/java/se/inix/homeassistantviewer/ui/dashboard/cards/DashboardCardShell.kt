@@ -31,10 +31,17 @@ internal fun DashboardCardShell(
     colors: CardColors,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onOpenDetail: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val body: @Composable ColumnScope.() -> Unit = {
-        CardHeader(title = title, color = colors.onContainer)
+        CardHeader(
+            title = title,
+            color = colors.onContainer,
+            trailing = onOpenDetail?.let { open ->
+                { CardHistoryAction(tint = colors.onContainer, onClick = open) }
+            }
+        )
         content()
     }
     val containerColors = CardDefaults.cardColors(containerColor = colors.container)

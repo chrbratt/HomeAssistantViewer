@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.security.crypto.ktx)
     implementation(libs.reorderable)
+    implementation(libs.vico.compose.m3)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.core)

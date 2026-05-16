@@ -35,7 +35,8 @@ import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 internal fun ClimateCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenDetail: (() -> Unit)? = null
 ) {
     val entity = item.entity ?: return
     val currentTemp = entity.currentTemperature
@@ -53,7 +54,8 @@ internal fun ClimateCard(
     DashboardCardShell(
         title = entity.friendlyName ?: entity.entityId,
         colors = colors,
-        modifier = modifier
+        modifier = modifier,
+        onOpenDetail = onOpenDetail
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

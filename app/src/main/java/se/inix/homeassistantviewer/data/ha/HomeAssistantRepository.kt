@@ -11,8 +11,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import se.inix.homeassistantviewer.BuildConfig
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.model.HaHistoryRow
 import se.inix.homeassistantviewer.data.model.LightControlBody
 import se.inix.homeassistantviewer.data.model.ServiceCallBody
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 /**
  * REST API surface for one Home Assistant installation. Each connection has its
@@ -120,4 +123,22 @@ class HomeAssistantRepository(
     suspend fun triggerAutomation(entityId: String): List<HaEntityState> =
         api.callServiceWithData("automation", "trigger",
             mapOf("entity_id" to entityId))
+
+    /**
+     * Fetches the state timeline for [entityId] between [start] and [end].
+     * Returns an empty list if HA's recorder integration has no data for the
+     * window (or if the entity simply hasn't changed), so callers should
+     * differentiate "no data" from "error" via the surrounding try/catch.
+     *
+     * Only called from the entity-detail screen — the dashboard never fetches
+     * history, keeping the home view lightweight.
+     */
+    suspend fun getHistory(entityId: String, start: Instant, end: Instant): List<HaHistoryRow> {
+        // HA expects ISO-8601 with offset; Instant.toString() yields the
+        // canonical "...Z" form that HA accepts.
+        val startIso = DateTimeFormatter.ISO_INSTANT.format(start)
+        val endIso = DateTimeFormatter.ISO_INSTANT.format(end)
+        val outer = api.getHistory(startIso = startIso, entityId = entityId, endIso = endIso)
+        return outer.firstOrNull().orEmpty()
+    }
 }

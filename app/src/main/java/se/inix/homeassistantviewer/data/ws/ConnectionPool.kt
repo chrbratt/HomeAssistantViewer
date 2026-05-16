@@ -79,4 +79,16 @@ class ConnectionPool(
     fun reconnectAll() {
         _clients.value.values.forEach { it.wsClient.ensureConnected() }
     }
+
+    /**
+     * Closes every active WebSocket. Called from [StugaApplication] after the
+     * process has been backgrounded for a debounce window so the device does
+     * not keep parsing `state_changed` events the user cannot see — saving
+     * battery and mobile data on busy HA installations.
+     *
+     * The matching [reconnectAll] call on `ON_START` restores live updates.
+     */
+    fun disconnectAll() {
+        _clients.value.values.forEach { it.wsClient.closeSocket() }
+    }
 }

@@ -19,7 +19,11 @@ import se.inix.homeassistantviewer.ui.common.sensorIconTint
 
 /** Read-only display card for sensors and anything else without a control affordance. */
 @Composable
-internal fun SensorCard(entity: HaEntityState, modifier: Modifier = Modifier) {
+internal fun SensorCard(
+    entity: HaEntityState,
+    modifier: Modifier = Modifier,
+    onOpenDetail: (() -> Unit)? = null
+) {
     val icon = getIconForEntity(entity)
     val iconTint = sensorIconTint(entity)
     val unit = entity.unitOfMeasurement
@@ -30,7 +34,8 @@ internal fun SensorCard(entity: HaEntityState, modifier: Modifier = Modifier) {
     DashboardCardShell(
         title = entity.friendlyName ?: entity.entityId,
         colors = colors,
-        modifier = modifier
+        modifier = modifier,
+        onOpenDetail = onOpenDetail
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

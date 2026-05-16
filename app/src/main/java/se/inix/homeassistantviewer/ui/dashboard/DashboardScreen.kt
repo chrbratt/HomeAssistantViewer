@@ -50,6 +50,7 @@ import se.inix.homeassistantviewer.ui.dashboard.components.SettingsHealthBadge
 fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToEntityPicker: () -> Unit,
+    onNavigateToEntityDetail: (connectionId: String, entityId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -128,7 +129,8 @@ fun DashboardScreen(
                             columns = dashboardColumns,
                             onAction = viewModel::performAction,
                             onSaveOrder = viewModel::saveItemOrder,
-                            onRequestRemove = { pendingRemoval = it }
+                            onRequestRemove = { pendingRemoval = it },
+                            onOpenDetail = onNavigateToEntityDetail
                         )
                     }
                 }

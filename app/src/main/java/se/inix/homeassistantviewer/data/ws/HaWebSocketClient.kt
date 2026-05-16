@@ -112,6 +112,29 @@ class HaWebSocketClient(
         scope.cancel()
     }
 
+    /**
+     * Soft close — drops the socket but keeps the client reusable. Pending
+     * reconnect jobs are cancelled and backoff is reset so the next
+     * [ensureConnected] call retries immediately rather than waiting out the
+     * previous backoff window.
+     *
+     * Called when the app is backgrounded (via [ConnectionPool.disconnectAll])
+     * so the device stops parsing `state_changed` events the user cannot see.
+     * The matching foreground `ON_START` reconnects via [ensureConnected].
+     */
+    fun closeSocket() {
+        if (disposed) return
+        reconnectJob?.cancel()
+        reconnectJob = null
+        backoffMs = INITIAL_BACKOFF_MS
+        webSocket?.close(CLOSE_NORMAL, "background")
+        webSocket = null
+        // Preserve AuthFailed so reopening doesn't silently retry a bad token.
+        if (_connectionState.value !is ConnectionState.AuthFailed) {
+            _connectionState.value = ConnectionState.Disconnected
+        }
+    }
+
     private fun toWsUrl(base: String): String {
         val trimmed = base.trimEnd('/')
         val wsBase = when {

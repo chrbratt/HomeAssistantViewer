@@ -112,7 +112,7 @@ private fun AppHeader() {
                 )
             }
         }
-        Text("Home Assistant Viewer", style = MaterialTheme.typography.headlineSmall)
+        Text("HA Viewer", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Version ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodySmall,

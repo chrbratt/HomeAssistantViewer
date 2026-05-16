@@ -9,14 +9,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.lifecycle.SavedStateHandle
+import androidx.compose.ui.platform.LocalContext
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 import se.inix.homeassistantviewer.ui.about.AboutScreen
 import se.inix.homeassistantviewer.ui.connections.ConnectionsScreen
 import se.inix.homeassistantviewer.ui.dashboard.DashboardScreen
+import se.inix.homeassistantviewer.ui.detail.ConnectionPoolDataSource
+import se.inix.homeassistantviewer.ui.detail.EntityDetailScreen
+import se.inix.homeassistantviewer.ui.detail.EntityDetailViewModel
 import se.inix.homeassistantviewer.ui.picker.EntityPickerScreen
 import se.inix.homeassistantviewer.ui.settings.SettingsScreen
 import se.inix.homeassistantviewer.ui.settings.SettingsViewModel
@@ -55,7 +64,15 @@ fun StugaApp() {
         composable("dashboard") {
             DashboardScreen(
                 onNavigateToSettings = { navController.navigate("settings") },
-                onNavigateToEntityPicker = { navController.navigate("entity_picker") }
+                onNavigateToEntityPicker = { navController.navigate("entity_picker") },
+                onNavigateToEntityDetail = { connectionId, entityId ->
+                    // URL-encode entity IDs so a dot like "sensor.kitchen" passes through
+                    // the route segment cleanly. Connection IDs are UUIDs so they don't
+                    // need escaping, but we encode both for symmetry and safety.
+                    val encodedConn = java.net.URLEncoder.encode(connectionId, "UTF-8")
+                    val encodedEntity = java.net.URLEncoder.encode(entityId, "UTF-8")
+                    navController.navigate("entity_detail/$encodedConn/$encodedEntity")
+                }
             )
         }
         composable("settings") {
@@ -73,6 +90,43 @@ fun StugaApp() {
         }
         composable("about") {
             AboutScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(
+            route = "entity_detail/{${EntityDetailViewModel.ARG_CONNECTION_ID}}/{${EntityDetailViewModel.ARG_ENTITY_ID}}",
+            arguments = listOf(
+                navArgument(EntityDetailViewModel.ARG_CONNECTION_ID) { type = NavType.StringType },
+                navArgument(EntityDetailViewModel.ARG_ENTITY_ID) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val connectionId = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString(EntityDetailViewModel.ARG_CONNECTION_ID).orEmpty(),
+                "UTF-8"
+            )
+            val entityId = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString(EntityDetailViewModel.ARG_ENTITY_ID).orEmpty(),
+                "UTF-8"
+            )
+            val container = (LocalContext.current.applicationContext as StugaApplication).container
+            // Detail VM is constructed lazily — Compose-Nav only enters this block
+            // when the route is navigated to, so no history-related code (including
+            // Vico) is paid for on the dashboard path.
+            val viewModel: EntityDetailViewModel = viewModel(factory = viewModelFactory {
+                initializer {
+                    EntityDetailViewModel(
+                        savedStateHandle = SavedStateHandle(
+                            mapOf(
+                                EntityDetailViewModel.ARG_CONNECTION_ID to connectionId,
+                                EntityDetailViewModel.ARG_ENTITY_ID to entityId
+                            )
+                        ),
+                        dataSource = ConnectionPoolDataSource(container.connectionPool, connectionId)
+                    )
+                }
+            })
+            EntityDetailScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

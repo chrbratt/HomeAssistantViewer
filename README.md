@@ -1,4 +1,4 @@
-# Home Assistant Viewer
+# HA Viewer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -7,7 +7,7 @@ A lightweight Android companion app for [Home Assistant](https://www.home-assist
 **Created by C Bratt · [inix.se](http://inix.se)**
 
 <p align="center">
-  <img src="docs/feature_graphic.png" alt="Home Assistant Viewer" width="100%">
+  <img src="docs/feature_graphic.png" alt="HA Viewer" width="100%">
 </p>
 
 <p align="center">
