@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel =
                 viewModel(factory = AppViewModelProvider.Factory)
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
+            val colorPalette by settingsViewModel.colorPalette.collectAsStateWithLifecycle()
 
             val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT   -> false
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM  -> isSystemInDarkTheme()
             }
 
-            HomeAssistantStugaTheme(darkTheme = darkTheme) {
+            HomeAssistantStugaTheme(darkTheme = darkTheme, palette = colorPalette) {
                 StugaApp()
             }
         }

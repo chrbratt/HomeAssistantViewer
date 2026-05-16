@@ -9,21 +9,19 @@ import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.common.Fill
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.domain.history.SeriesKind
@@ -87,9 +85,13 @@ private fun NumericHistoryChart(
             rememberLineCartesianLayer(
                 lineProvider = LineCartesianLayer.LineProvider.series(
                     LineCartesianLayer.rememberLine(
-                        fill = LineCartesianLayer.LineFill.single(fill(lineColor)),
-                        areaFill = LineCartesianLayer.AreaFill.single(fill(areaColor)),
-                        pointConnector = LineCartesianLayer.PointConnector.cubic()
+                        fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
+                        areaFill = LineCartesianLayer.AreaFill.single(Fill(areaColor)),
+                        // Vico 3.1 introduced `Interpolator`, which obsoletes the
+                        // deprecated `PointConnector` we used in 2.x. `cubic()`
+                        // is the drop-in replacement and produces an identical
+                        // curve to the old `PointConnector.cubic()`.
+                        interpolator = LineCartesianLayer.Interpolator.cubic()
                     )
                 )
             ),
@@ -150,9 +152,9 @@ private fun buildFrame(series: HistorySeries): ChartFrame? {
  * place.
  */
 private data class AxisComponents(
-    val label: com.patrykandpatrick.vico.core.common.component.TextComponent,
-    val guideline: com.patrykandpatrick.vico.core.common.component.LineComponent,
-    val axisLine: com.patrykandpatrick.vico.core.common.component.LineComponent
+    val label: com.patrykandpatrick.vico.compose.common.component.TextComponent,
+    val guideline: com.patrykandpatrick.vico.compose.common.component.LineComponent,
+    val axisLine: com.patrykandpatrick.vico.compose.common.component.LineComponent
 )
 
 @Composable
@@ -160,10 +162,14 @@ private fun rememberAxisComponents(): AxisComponents {
     val labelColor = MaterialTheme.colorScheme.onSurface
     val guidelineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
     val axisLineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    // Vico 3 swapped `color = …` for `style = TextStyle(…)`. Using bodySmall
+    // also makes axis labels track the user's font-scale setting instead of
+    // hard-coding a pixel size.
+    val labelStyle = MaterialTheme.typography.bodySmall.copy(color = labelColor)
     return AxisComponents(
-        label = rememberAxisLabelComponent(color = labelColor),
-        guideline = rememberAxisGuidelineComponent(fill = fill(guidelineColor)),
-        axisLine = rememberAxisLineComponent(fill = fill(axisLineColor))
+        label = rememberAxisLabelComponent(style = labelStyle),
+        guideline = rememberAxisGuidelineComponent(fill = Fill(guidelineColor)),
+        axisLine = rememberAxisLineComponent(fill = Fill(axisLineColor))
     )
 }
 

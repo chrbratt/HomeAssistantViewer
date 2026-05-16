@@ -27,8 +27,13 @@ internal class DashboardPreferencesStore(
     private val _columns = MutableStateFlow(DEFAULT_COLUMNS)
     val columns: StateFlow<Int> = _columns.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(readInitialTheme())
+    private val _themeMode = MutableStateFlow(readInitial(KEY_THEME, ThemeMode.SYSTEM, ThemeMode::valueOf))
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _colorPalette = MutableStateFlow(
+        readInitial(KEY_PALETTE, ColorPalette.DYNAMIC, ColorPalette::valueOf)
+    )
+    val colorPalette: StateFlow<ColorPalette> = _colorPalette.asStateFlow()
 
     /** Called by [SettingsRepository] when DataStore replays/updates. */
     internal fun onDataStorePayload(prefs: Preferences) {
@@ -36,6 +41,9 @@ internal class DashboardPreferencesStore(
         _themeMode.value = prefs[KEY_THEME]
             ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
             ?: ThemeMode.SYSTEM
+        _colorPalette.value = prefs[KEY_PALETTE]
+            ?.let { runCatching { ColorPalette.valueOf(it) }.getOrNull() }
+            ?: ColorPalette.DYNAMIC
     }
 
     fun saveColumns(columns: Int) {
@@ -49,16 +57,31 @@ internal class DashboardPreferencesStore(
         scope.launch { dataStore.edit { it[KEY_THEME] = mode.name } }
     }
 
-    private fun readInitialTheme(): ThemeMode = runCatching {
+    fun saveColorPalette(palette: ColorPalette) {
+        _colorPalette.value = palette
+        scope.launch { dataStore.edit { it[KEY_PALETTE] = palette.name } }
+    }
+
+    /**
+     * Read the persisted value for [key] synchronously so the very first
+     * Compose frame already uses the right scheme — otherwise the user sees
+     * a brief flash on cold start.
+     */
+    private fun <T> readInitial(
+        key: androidx.datastore.preferences.core.Preferences.Key<String>,
+        default: T,
+        parser: (String) -> T
+    ): T = runCatching {
         runBlocking(Dispatchers.IO) {
             val prefs = dataStore.data.first()
-            prefs[KEY_THEME]?.let { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM
+            prefs[key]?.let(parser) ?: default
         }
-    }.getOrDefault(ThemeMode.SYSTEM)
+    }.getOrDefault(default)
 
     companion object {
         const val DEFAULT_COLUMNS = 2
         internal val KEY_COLUMNS = intPreferencesKey("columns")
         internal val KEY_THEME   = stringPreferencesKey("theme_mode")
+        internal val KEY_PALETTE = stringPreferencesKey("color_palette")
     }
 }

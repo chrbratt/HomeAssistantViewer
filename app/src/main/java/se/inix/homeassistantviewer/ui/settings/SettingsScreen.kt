@@ -1,6 +1,8 @@
 package se.inix.homeassistantviewer.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,14 +10,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.SettingsBrightness
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,9 +39,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 
@@ -50,6 +59,7 @@ fun SettingsScreen(
 ) {
     val dashboardColumns by viewModel.dashboardColumns.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val colorPalette by viewModel.colorPalette.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -140,6 +150,11 @@ fun SettingsScreen(
                 }
             }
 
+            ColorPaletteCard(
+                selected = colorPalette,
+                onSelect = viewModel::saveColorPalette
+            )
+
             NavigationRow(
                 icon = Icons.Rounded.Info,
                 title = "About",
@@ -148,6 +163,182 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+/**
+ * Compact picker for the user's [ColorPalette]. Each row shows the palette's
+ * three signature colours so the user gets a real-time preview without
+ * having to commit. The currently-selected row is highlighted with a check
+ * mark and a tinted background, so selection is obvious at a glance.
+ */
+@Composable
+private fun ColorPaletteCard(
+    selected: ColorPalette,
+    onSelect: (ColorPalette) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.Palette,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text("Color palette", style = MaterialTheme.typography.titleMedium)
+            }
+            Text(
+                "Pick a colour scheme. \"Dynamic\" follows your phone's Material You " +
+                    "palette on Android 12+; the others are hand-crafted and look the " +
+                    "same on every device.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            PaletteOption.entries.forEach { option ->
+                PaletteRow(
+                    option = option,
+                    isSelected = option.palette == selected,
+                    onClick = { onSelect(option.palette) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaletteRow(
+    option: PaletteOption,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val containerColor =
+        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor =
+        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PaletteSwatch(option)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    option.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                )
+                Text(
+                    option.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.75f)
+                )
+            }
+            if (isSelected) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = "Selected",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaletteSwatch(option: PaletteOption) {
+    if (option.palette == ColorPalette.DYNAMIC) {
+        // The dynamic palette can't be previewed reliably (it depends on
+        // the user's wallpaper), so we show a single "auto-magical" glyph
+        // tinted with the current scheme's primary instead.
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+            option.previewColors.forEach { dot ->
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .background(dot, CircleShape)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * UI-side metadata for each [ColorPalette]. Kept here (not in the data
+ * layer) because the labels, descriptions and preview swatches are pure
+ * presentation concerns.
+ */
+private enum class PaletteOption(
+    val palette: ColorPalette,
+    val label: String,
+    val description: String,
+    val previewColors: List<Color>
+) {
+    Dynamic(
+        palette = ColorPalette.DYNAMIC,
+        label = "Dynamic",
+        description = "Follow Material You (Android 12+)",
+        previewColors = emptyList()
+    ),
+    Ocean(
+        palette = ColorPalette.OCEAN,
+        label = "Ocean",
+        description = "Calm cyan and lavender",
+        previewColors = listOf(
+            Color(0xFF62D2FF),
+            Color(0xFFB3CAD5),
+            Color(0xFFC3C3EA)
+        )
+    ),
+    Aurora(
+        palette = ColorPalette.AURORA,
+        label = "Aurora",
+        description = "Electric indigo and magenta",
+        previewColors = listOf(
+            Color(0xFFB4ACFF),
+            Color(0xFFC9C2DC),
+            Color(0xFFFFB1D5)
+        )
+    ),
+    Sunset(
+        palette = ColorPalette.SUNSET,
+        label = "Sunset",
+        description = "Warm amber with cool teal accents",
+        previewColors = listOf(
+            Color(0xFFFFB68F),
+            Color(0xFFFFB4AA),
+            Color(0xFF7AD0CC)
+        )
+    );
 }
 
 @Composable
