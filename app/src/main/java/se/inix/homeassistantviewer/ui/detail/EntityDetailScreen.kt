@@ -29,13 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.ui.common.EditTextDialog
+import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
+import se.inix.homeassistantviewer.ui.dashboard.cards.EntityCard
 import se.inix.homeassistantviewer.ui.detail.components.HistoryChart
 import se.inix.homeassistantviewer.ui.detail.components.TimeRangeChips
 
@@ -69,6 +70,13 @@ internal fun EntityDetailScreen(
 
     var renaming by remember { mutableStateOf(false) }
 
+    val currentItem = DashboardItem.Entity(
+        connectionId = viewModel.connectionId,
+        entityId = viewModel.entityId,
+        entity = currentState(uiState),
+        customName = customName
+    )
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -100,6 +108,9 @@ internal fun EntityDetailScreen(
             uiState = uiState,
             selectedRange = selectedRange,
             onSelectRange = viewModel::selectRange,
+            currentItem = currentItem,
+            onAction = viewModel::performAction,
+            onNavigateBack = onNavigateBack,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
@@ -137,8 +148,31 @@ private fun EntityDetailBody(
     uiState: EntityDetailUiState,
     selectedRange: HistoryRange,
     onSelectRange: (HistoryRange) -> Unit,
+    currentItem: DashboardItem.Entity,
+    onAction: (se.inix.homeassistantviewer.ui.dashboard.EntityAction) -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Reuse the dashboard's domain-specific card so toggles, sliders,
+    // cover positions and the like are wired up identically in both
+    // surfaces. `onOpenDetail = null` hides the info-icon — we're
+    // already on the detail screen.
+    val controlCard: @Composable () -> Unit = {
+        EntityCard(
+            item = currentItem,
+            onAction = onAction,
+            // The top-app-bar already exposes Rename; we don't want a
+            // second affordance on the embedded card.
+            onRequestRename = { },
+            // If the entity becomes unavailable while the detail screen
+            // is open, the UnavailableEntityCard's close button should
+            // navigate back rather than dispatch a remove from this
+            // surface — the dashboard is the authoritative remove site.
+            onRequestRemove = onNavigateBack,
+            onOpenDetail = null
+        )
+    }
+
     BoxWithConstraints(modifier = modifier) {
         // Wider than tall → side-by-side. The threshold deliberately uses
         // the visible area (after Scaffold padding) so it reacts the same
@@ -156,7 +190,7 @@ private fun EntityDetailBody(
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    CurrentValueCard(state = currentState(uiState))
+                    controlCard()
                     TimeRangeChips(selected = selectedRange, onSelect = onSelectRange)
                 }
                 ChartBody(
@@ -172,7 +206,7 @@ private fun EntityDetailBody(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                CurrentValueCard(state = currentState(uiState))
+                controlCard()
                 TimeRangeChips(selected = selectedRange, onSelect = onSelectRange)
                 ChartBody(
                     state = uiState,
@@ -217,36 +251,6 @@ private fun ChartBody(
 }
 
 @Composable
-private fun CurrentValueCard(state: HaEntityState?) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                "Current value",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = state?.let { formatValue(it) } ?: "—",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            state?.lastChanged?.let { lastChanged ->
-                Text(
-                    text = "Updated $lastChanged",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun CenteredProgress(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
@@ -272,11 +276,6 @@ private fun MessageBox(
             )
         }
     }
-}
-
-private fun formatValue(state: HaEntityState): String {
-    val unit = state.unitOfMeasurement
-    return if (unit.isNullOrBlank()) state.state else "${state.state} $unit"
 }
 
 private fun currentState(state: EntityDetailUiState): HaEntityState? = when (state) {

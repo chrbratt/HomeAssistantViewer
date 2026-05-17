@@ -18,6 +18,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DensityMedium
+import androidx.compose.material.icons.rounded.DensitySmall
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import se.inix.homeassistantviewer.data.settings.ColorPalette
+import se.inix.homeassistantviewer.data.settings.Density
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 
@@ -60,6 +63,7 @@ fun SettingsScreen(
     val dashboardColumns by viewModel.dashboardColumns.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val colorPalette by viewModel.colorPalette.collectAsStateWithLifecycle()
+    val density by viewModel.density.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -107,6 +111,42 @@ fun SettingsScreen(
                                 onClick = { viewModel.saveDashboardColumns(count) },
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
                                 label = { Text("$count") }
+                            )
+                        }
+                    }
+                }
+            }
+
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Density", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "How tightly cards are packed on the dashboard.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val densityOptions = listOf(
+                        Density.COMFORTABLE to Pair(Icons.Rounded.DensityMedium, "Comfortable"),
+                        Density.COMPACT     to Pair(Icons.Rounded.DensitySmall,  "Compact"),
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        densityOptions.forEachIndexed { index, (option, meta) ->
+                            val (icon, label) = meta
+                            SegmentedButton(
+                                selected = density == option,
+                                onClick = { viewModel.saveDensity(option) },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index, count = densityOptions.size
+                                ),
+                                icon = {
+                                    SegmentedButtonDefaults.Icon(active = density == option) {
+                                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    }
+                                },
+                                label = { Text(label) }
                             )
                         }
                     }
@@ -337,6 +377,36 @@ private enum class PaletteOption(
             Color(0xFFFFB68F),
             Color(0xFFFFB4AA),
             Color(0xFF7AD0CC)
+        )
+    ),
+    Ember(
+        palette = ColorPalette.EMBER,
+        label = "Ember",
+        description = "Graphite with a single orange accent",
+        previewColors = listOf(
+            Color(0xFFFF8E45),
+            Color(0xFFD4D4D8),
+            Color(0xFF8CCFFF)
+        )
+    ),
+    Amber(
+        palette = ColorPalette.AMBER,
+        label = "Amber",
+        description = "Warm honey accents on brown-tinted surfaces",
+        previewColors = listOf(
+            Color(0xFFFFA862),
+            Color(0xFFFFCBA5),
+            Color(0xFF8CCFFF)
+        )
+    ),
+    Citrine(
+        palette = ColorPalette.CITRINE,
+        label = "Citrine",
+        description = "Warm dark with golden yellow; clear switch states",
+        previewColors = listOf(
+            Color(0xFFFFD23F),
+            Color(0xFFFFCD61),
+            Color(0xFFB6CD60)
         )
     );
 }

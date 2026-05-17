@@ -12,5 +12,12 @@ package se.inix.homeassistantviewer.data.settings
  * - [OCEAN] — the previously-baked cyan/teal/lavender palette (calm, cool).
  * - [AURORA] — deep indigo, lilac and magenta (electric, modern).
  * - [SUNSET] — warm amber/coral with a cool teal accent (cozy, modern).
+ * - [EMBER] — graphite canvas with vibrant orange. Monochromatic
+ *   surface system; orange is the only saturated accent.
+ * - [AMBER] — Ember's warmer sibling. Brown-tinted surfaces and a
+ *   honey-leaning primary for a "fireplace" feel.
+ * - [CITRINE] — warm near-black with golden yellow. Same on/off
+ *   readability goal as [EMBER], rebalanced around yellow with a
+ *   lime-green tertiary.
  */
-enum class ColorPalette { DYNAMIC, OCEAN, AURORA, SUNSET }
+enum class ColorPalette { DYNAMIC, OCEAN, AURORA, SUNSET, EMBER, AMBER, CITRINE }

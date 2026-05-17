@@ -15,11 +15,15 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.ws.ConnectionPool
 import se.inix.homeassistantviewer.domain.history.HistoryPoint
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.domain.history.HistorySeriesBuilder
 import se.inix.homeassistantviewer.domain.history.SeriesClassifier
+import se.inix.homeassistantviewer.ui.dashboard.EntityAction
+import se.inix.homeassistantviewer.ui.dashboard.EntityActionDispatcher
+import se.inix.homeassistantviewer.ui.dashboard.EntityKey
 import java.time.Instant
 
 /**
@@ -41,11 +45,24 @@ internal class EntityDetailViewModel(
     private val dataSource: EntityHistoryDataSource,
     private val now: () -> Instant = Instant::now,
     customNameSource: Flow<String?> = flowOf(null),
-    private val saveCustomName: (String?) -> Unit = {}
+    private val saveCustomName: (String?) -> Unit = {},
+    // Nullable so unit tests can instantiate the VM without wiring up a
+    // real ConnectionPool. When null, [performAction] is a no-op — which
+    // is fine for the read-only history path the existing tests cover.
+    connectionPool: ConnectionPool? = null,
 ) : ViewModel() {
 
     val entityId: String = requireNotNull(savedStateHandle[ARG_ENTITY_ID]) {
         "EntityDetailViewModel requires '$ARG_ENTITY_ID' nav argument"
+    }
+
+    /**
+     * Owning connection. Required for [performAction] to know which HA
+     * server to dispatch the call against — the detail screen never sees
+     * entities from more than one connection at a time.
+     */
+    val connectionId: String = requireNotNull(savedStateHandle[ARG_CONNECTION_ID]) {
+        "EntityDetailViewModel requires '$ARG_CONNECTION_ID' nav argument"
     }
 
     private val _selectedRange = MutableStateFlow(HistoryRange.Default)
@@ -83,6 +100,35 @@ internal class EntityDetailViewModel(
 
     private var fetchJob: Job? = null
 
+    /**
+     * Reuses the dashboard's [EntityActionDispatcher] verbatim so toggle /
+     * brightness / cover / climate / etc. share **one** dispatch path
+     * across the app. The dispatcher is constructed lazily and only when a
+     * [ConnectionPool] was wired in — in tests it stays null and
+     * [performAction] becomes a no-op.
+     *
+     * `readState` and `optimistic` are scoped to this single entity:
+     *  - reads come from [latestCurrentState], filtered to this entity id
+     *  - optimistic writes update [latestCurrentState] and patch the
+     *    `currentState` on the visible [EntityDetailUiState] so the card
+     *    visually flips instantly (just like on the dashboard).
+     *
+     * The chart is **not** patched optimistically; the eventual WS event
+     * already triggers the existing `applyLiveUpdate` path which appends
+     * a new point.
+     */
+    private val dispatcher: EntityActionDispatcher? = connectionPool?.let { pool ->
+        EntityActionDispatcher(
+            connectionPool = pool,
+            readState = { key ->
+                latestCurrentState?.takeIf {
+                    key.connectionId == connectionId && key.entityId == entityId
+                }
+            },
+            optimistic = { _, state -> applyOptimisticCurrentState(state) }
+        )
+    }
+
     init {
         observeStateChanges()
         fetchForRange(_selectedRange.value)
@@ -103,6 +149,31 @@ internal class EntityDetailViewModel(
     fun refresh() {
         seriesCache.remove(_selectedRange.value)
         fetchForRange(_selectedRange.value)
+    }
+
+    /**
+     * Dispatches a user action (toggle, brightness, cover position, …) for
+     * this entity. No-op when no [ConnectionPool] is wired in (test mode).
+     */
+    fun performAction(action: EntityAction) {
+        val d = dispatcher ?: return
+        viewModelScope.launch { d.dispatch(action) }
+    }
+
+    /**
+     * Applies an optimistic state update from the dispatcher. Patches both
+     * the in-memory [latestCurrentState] and the visible `currentState`
+     * on the current [EntityDetailUiState] so the card flips immediately.
+     */
+    private fun applyOptimisticCurrentState(state: HaEntityState) {
+        latestCurrentState = state
+        _uiState.value = when (val current = _uiState.value) {
+            is EntityDetailUiState.Loaded -> current.copy(currentState = state)
+            is EntityDetailUiState.Empty -> current.copy(currentState = state)
+            // Loading / Error have no card to flip — the real WS event
+            // will sync state once the underlying call returns.
+            else -> current
+        }
     }
 
     private fun fetchForRange(range: HistoryRange) {

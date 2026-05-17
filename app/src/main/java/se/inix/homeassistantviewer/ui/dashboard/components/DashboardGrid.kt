@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
 import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 import se.inix.homeassistantviewer.ui.dashboard.cards.EntityCard
+import se.inix.homeassistantviewer.ui.dashboard.cards.LocalCardSpacing
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyStaggeredGridState
 
@@ -58,13 +59,14 @@ fun DashboardGrid(
     }
 
     val haptic = LocalHapticFeedback.current
+    val spacing = LocalCardSpacing.current
 
     LazyVerticalStaggeredGrid(
         state = lazyGridState,
         columns = StaggeredGridCells.Fixed(columns),
-        contentPadding = PaddingValues(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalItemSpacing = 8.dp,
+        contentPadding = PaddingValues(spacing.gridContentPadding),
+        horizontalArrangement = Arrangement.spacedBy(spacing.gridItemSpacing),
+        verticalItemSpacing = spacing.gridItemSpacing,
         modifier = Modifier.fillMaxSize()
     ) {
         items(

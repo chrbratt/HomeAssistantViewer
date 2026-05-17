@@ -19,7 +19,9 @@ internal object SunsetPalette : AppPalette {
     override val light = lightColorScheme(
         primary = Color(0xFFA2461A),
         onPrimary = Color(0xFFFFFFFF),
-        primaryContainer = Color(0xFFFFDBC9),
+        // Deeper peach than the standard light errorContainer pink
+        // (#FFDAD6) so the "healthy" and "error" banners stay separable.
+        primaryContainer = Color(0xFFFFCDAA),
         onPrimaryContainer = Color(0xFF360F00),
         secondary = Color(0xFF8F4A3F),
         onSecondary = Color(0xFFFFFFFF),

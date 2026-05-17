@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,6 +26,8 @@ import se.inix.homeassistantviewer.di.AppViewModelProvider
 import se.inix.homeassistantviewer.ui.about.AboutScreen
 import se.inix.homeassistantviewer.ui.connections.ConnectionsScreen
 import se.inix.homeassistantviewer.ui.dashboard.DashboardScreen
+import se.inix.homeassistantviewer.ui.dashboard.cards.CardSpacing
+import se.inix.homeassistantviewer.ui.dashboard.cards.LocalCardSpacing
 import se.inix.homeassistantviewer.ui.detail.ConnectionPoolDataSource
 import se.inix.homeassistantviewer.ui.detail.EntityDetailScreen
 import se.inix.homeassistantviewer.ui.detail.EntityDetailViewModel
@@ -45,6 +48,7 @@ class MainActivity : ComponentActivity() {
                 viewModel(factory = AppViewModelProvider.Factory)
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
             val colorPalette by settingsViewModel.colorPalette.collectAsStateWithLifecycle()
+            val density by settingsViewModel.density.collectAsStateWithLifecycle()
 
             val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT   -> false
@@ -53,7 +57,14 @@ class MainActivity : ComponentActivity() {
             }
 
             HomeAssistantStugaTheme(darkTheme = darkTheme, palette = colorPalette) {
-                StugaApp()
+                // Binds the chosen density once at the root of the
+                // composition so every card and the grid read it via
+                // LocalCardSpacing without anyone passing it around.
+                CompositionLocalProvider(
+                    LocalCardSpacing provides CardSpacing.forDensity(density)
+                ) {
+                    StugaApp()
+                }
             }
         }
     }
@@ -135,7 +146,11 @@ fun StugaApp() {
                         },
                         saveCustomName = { name ->
                             repo.setFavoriteCustomName(connectionId, entityId, name)
-                        }
+                        },
+                        // Lets the detail screen dispatch toggles, brightness,
+                        // cover positions etc. via the same dispatcher path
+                        // the dashboard uses.
+                        connectionPool = container.connectionPool
                     )
                 }
             })

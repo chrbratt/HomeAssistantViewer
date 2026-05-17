@@ -25,9 +25,12 @@ import se.inix.homeassistantviewer.data.settings.ColorPalette
 class PaletteTest {
 
     private val handCrafted: List<Pair<ColorPalette, AppPalette>> = listOf(
-        ColorPalette.OCEAN  to OceanPalette,
-        ColorPalette.AURORA to AuroraPalette,
-        ColorPalette.SUNSET to SunsetPalette,
+        ColorPalette.OCEAN   to OceanPalette,
+        ColorPalette.AURORA  to AuroraPalette,
+        ColorPalette.SUNSET  to SunsetPalette,
+        ColorPalette.EMBER   to EmberPalette,
+        ColorPalette.AMBER   to AmberPalette,
+        ColorPalette.CITRINE to CitrinePalette,
     )
 
     @Test
@@ -42,16 +45,34 @@ class PaletteTest {
 
     @Test
     fun `status colours stay distinguishable in every dark scheme`() {
-        handCrafted.forEach { (id, p) ->
+        assertAllPalettes { (id, p) ->
             assertStatusColoursDistinct(p.dark, label = "$id dark")
         }
     }
 
     @Test
     fun `status colours stay distinguishable in every light scheme`() {
-        handCrafted.forEach { (id, p) ->
+        assertAllPalettes { (id, p) ->
             assertStatusColoursDistinct(p.light, label = "$id light")
         }
+    }
+
+    /**
+     * Runs [check] against every hand-crafted palette and aggregates the
+     * failures, instead of stopping at the first one. Without this, a
+     * single buggy palette would mask issues in every palette listed
+     * after it.
+     */
+    private fun assertAllPalettes(
+        check: (Pair<ColorPalette, AppPalette>) -> Unit
+    ) {
+        val failures = handCrafted.mapNotNull { entry ->
+            runCatching { check(entry) }.exceptionOrNull()?.message
+        }
+        assertTrue(
+            "Palette invariants failed:\n${failures.joinToString("\n")}",
+            failures.isEmpty()
+        )
     }
 
     @Test

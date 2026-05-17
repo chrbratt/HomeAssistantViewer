@@ -21,7 +21,7 @@ fun EntityCard(
     onAction: (EntityAction) -> Unit,
     onRequestRemove: () -> Unit,
     onRequestRename: () -> Unit,
-    onOpenDetail: (connectionId: String, entityId: String) -> Unit,
+    onOpenDetail: ((connectionId: String, entityId: String) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val entity = item.entity
@@ -38,8 +38,13 @@ fun EntityCard(
     // Scripts / scenes / automations are one-shot triggers with no useful
     // historical timeline ("did this script run?" is logged but not
     // chartable), so we skip the info icon on those cards.
-    val openDetail: (() -> Unit)? = when (entity.domain) {
-        "scene", "script", "automation" -> null
+    //
+    // A null [onOpenDetail] also skips the icon — this is what the detail
+    // screen passes when it embeds the card, since "open detail" from
+    // inside the detail screen would be a no-op cycle.
+    val openDetail: (() -> Unit)? = when {
+        onOpenDetail == null -> null
+        entity.domain in NO_DETAIL_DOMAINS -> null
         else -> { -> onOpenDetail(item.connectionId, item.entityId) }
     }
 
@@ -70,3 +75,5 @@ fun EntityCard(
             SensorCard(item = item, onOpenDetail = openDetail, modifier = modifier)
     }
 }
+
+private val NO_DETAIL_DOMAINS = setOf("scene", "script", "automation")

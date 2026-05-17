@@ -8,8 +8,11 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import se.inix.homeassistantviewer.data.settings.ColorPalette
+import se.inix.homeassistantviewer.ui.theme.palettes.AmberPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.AppPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.AuroraPalette
+import se.inix.homeassistantviewer.ui.theme.palettes.CitrinePalette
+import se.inix.homeassistantviewer.ui.theme.palettes.EmberPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.OceanPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.SunsetPalette
 
@@ -46,6 +49,9 @@ private fun resolveColorScheme(palette: ColorPalette, darkTheme: Boolean): Color
     val handCrafted: AppPalette = when (palette) {
         ColorPalette.AURORA -> AuroraPalette
         ColorPalette.SUNSET -> SunsetPalette
+        ColorPalette.EMBER -> EmberPalette
+        ColorPalette.AMBER -> AmberPalette
+        ColorPalette.CITRINE -> CitrinePalette
         // DYNAMIC on a pre-S device falls through here, intentionally.
         ColorPalette.OCEAN, ColorPalette.DYNAMIC -> OceanPalette
     }

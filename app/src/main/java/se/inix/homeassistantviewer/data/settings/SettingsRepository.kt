@@ -52,6 +52,7 @@ class SettingsRepository(context: Context) {
     val dashboardColumns: StateFlow<Int> = dashboardPrefsStore.columns
     val themeMode: StateFlow<ThemeMode> = dashboardPrefsStore.themeMode
     val colorPalette: StateFlow<ColorPalette> = dashboardPrefsStore.colorPalette
+    val density: StateFlow<Density> = dashboardPrefsStore.density
 
     init {
         scope.launch {
@@ -96,6 +97,8 @@ class SettingsRepository(context: Context) {
     fun saveThemeMode(mode: ThemeMode) = dashboardPrefsStore.saveThemeMode(mode)
 
     fun saveColorPalette(palette: ColorPalette) = dashboardPrefsStore.saveColorPalette(palette)
+
+    fun saveDensity(density: Density) = dashboardPrefsStore.saveDensity(density)
 
     companion object {
         /** Re-exposed so callers don't need a separate import for URL normalisation. */

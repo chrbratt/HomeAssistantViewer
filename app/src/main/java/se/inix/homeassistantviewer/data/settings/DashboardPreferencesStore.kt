@@ -35,6 +35,11 @@ internal class DashboardPreferencesStore(
     )
     val colorPalette: StateFlow<ColorPalette> = _colorPalette.asStateFlow()
 
+    private val _density = MutableStateFlow(
+        readInitial(KEY_DENSITY, Density.COMFORTABLE, Density::valueOf)
+    )
+    val density: StateFlow<Density> = _density.asStateFlow()
+
     /** Called by [SettingsRepository] when DataStore replays/updates. */
     internal fun onDataStorePayload(prefs: Preferences) {
         _columns.value = prefs[KEY_COLUMNS] ?: DEFAULT_COLUMNS
@@ -44,6 +49,9 @@ internal class DashboardPreferencesStore(
         _colorPalette.value = prefs[KEY_PALETTE]
             ?.let { runCatching { ColorPalette.valueOf(it) }.getOrNull() }
             ?: ColorPalette.DYNAMIC
+        _density.value = prefs[KEY_DENSITY]
+            ?.let { runCatching { Density.valueOf(it) }.getOrNull() }
+            ?: Density.COMFORTABLE
     }
 
     fun saveColumns(columns: Int) {
@@ -60,6 +68,11 @@ internal class DashboardPreferencesStore(
     fun saveColorPalette(palette: ColorPalette) {
         _colorPalette.value = palette
         scope.launch { dataStore.edit { it[KEY_PALETTE] = palette.name } }
+    }
+
+    fun saveDensity(density: Density) {
+        _density.value = density
+        scope.launch { dataStore.edit { it[KEY_DENSITY] = density.name } }
     }
 
     /**
@@ -83,5 +96,6 @@ internal class DashboardPreferencesStore(
         internal val KEY_COLUMNS = intPreferencesKey("columns")
         internal val KEY_THEME   = stringPreferencesKey("theme_mode")
         internal val KEY_PALETTE = stringPreferencesKey("color_palette")
+        internal val KEY_DENSITY = stringPreferencesKey("density")
     }
 }

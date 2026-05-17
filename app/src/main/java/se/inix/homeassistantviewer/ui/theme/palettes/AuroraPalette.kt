@@ -28,7 +28,9 @@ internal object AuroraPalette : AppPalette {
         onSecondaryContainer = Color(0xFF1A1A2C),
         tertiary = Color(0xFF94406F),
         onTertiary = Color(0xFFFFFFFF),
-        tertiaryContainer = Color(0xFFFFD8E8),
+        // Pulled toward magenta so the "warning" container stays clearly
+        // distinct from the standard light errorContainer pink (#FFDAD6).
+        tertiaryContainer = Color(0xFFFFB7DA),
         onTertiaryContainer = Color(0xFF3D0027),
         error = Color(0xFFBA1A1A),
         onError = Color(0xFFFFFFFF),
