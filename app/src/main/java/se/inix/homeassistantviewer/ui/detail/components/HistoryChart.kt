@@ -51,6 +51,7 @@ internal fun HistoryChart(
 ) {
     when (series.kind) {
         is SeriesKind.Binary -> BinaryStateTimeline(series, range, modifier)
+        is SeriesKind.Categorical -> CategoricalStateTimeline(series, range, modifier)
         else -> NumericHistoryChart(series, range, modifier)
     }
 }
@@ -178,6 +179,7 @@ private fun rememberAxisComponents(): AxisComponents {
  *  - Hour     -> "HH:mm:ss"
  *  - Day      -> "HH:mm"
  *  - Week     -> "EEE HH:mm" (weekday + time)
+ *  - Month    -> "d MMM" (day + month)
  *
  * Built once per range and used for every label call so the chart does not
  * re-allocate `DateTimeFormatter` instances on every frame.
@@ -194,6 +196,7 @@ private fun rangeTimeFormatter(
         HistoryRange.Hour -> "HH:mm:ss"
         HistoryRange.Day -> "HH:mm"
         HistoryRange.Week -> "EEE HH:mm"
+        HistoryRange.Month -> "d MMM"
     }
     val formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     return CartesianValueFormatter { _, value, _ ->

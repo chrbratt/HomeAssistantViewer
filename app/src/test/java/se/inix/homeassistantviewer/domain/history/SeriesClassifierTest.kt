@@ -2,6 +2,7 @@ package se.inix.homeassistantviewer.domain.history
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SeriesClassifierTest {
@@ -20,13 +21,13 @@ class SeriesClassifierTest {
     }
 
     @Test
-    fun `sensor without unit classifies as Discrete`() {
-        assertEquals(SeriesKind.Discrete, SeriesClassifier.classify("sensor", null))
+    fun `sensor without unit classifies as Categorical`() {
+        assertTrue(SeriesClassifier.classify("sensor", null) is SeriesKind.Categorical)
     }
 
     @Test
-    fun `unknown domain without unit classifies as Discrete`() {
-        assertEquals(SeriesKind.Discrete, SeriesClassifier.classify("weather", null))
+    fun `unknown domain without unit classifies as Categorical`() {
+        assertTrue(SeriesClassifier.classify("weather", null) is SeriesKind.Categorical)
     }
 
     @Test
@@ -55,7 +56,7 @@ class SeriesClassifierTest {
     }
 
     @Test
-    fun `discrete projection is always null`() {
-        assertNull(SeriesClassifier.project(SeriesKind.Discrete, "sunny"))
+    fun `categorical projection is always null`() {
+        assertNull(SeriesClassifier.project(SeriesKind.Categorical(emptyList()), "sunny"))
     }
 }

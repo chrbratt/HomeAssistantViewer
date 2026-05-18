@@ -9,7 +9,8 @@ import java.time.Instant
  *
  * For binary entities the chart projects [value] = 0 (off) or 1 (on)
  * before plotting, so a single point type works for both numeric and
- * binary series.
+ * binary series. Categorical entities keep [value] null and rely on
+ * [rawState] for the state timeline renderer.
  */
 data class HistoryPoint(
     val timestamp: Instant,
@@ -28,8 +29,11 @@ sealed class SeriesKind {
     /** Switch-style series — only two states matter (on/off, locked/unlocked). */
     data object Binary : SeriesKind()
 
-    /** Catch-all for state strings with no useful numeric mapping. */
-    data object Discrete : SeriesKind()
+    /**
+     * Named text states (weather, select, device_tracker, text sensors, …).
+     * [states] lists distinct values in first-seen order for legend colours.
+     */
+    data class Categorical(val states: List<String>) : SeriesKind()
 }
 
 /**
@@ -39,4 +43,12 @@ sealed class SeriesKind {
 data class HistorySeries(
     val points: List<HistoryPoint>,
     val kind: SeriesKind
-)
+) {
+    /** Whether the series has enough data for its renderer to draw meaningfully. */
+    fun hasPlottableData(): Boolean = when (kind) {
+        is SeriesKind.Binary, is SeriesKind.Numeric ->
+            points.count { it.value != null } >= 2
+        is SeriesKind.Categorical ->
+            points.count { isPlottableHistoryState(it.rawState) } >= 2
+    }
+}

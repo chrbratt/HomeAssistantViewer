@@ -125,6 +125,7 @@ class DashboardViewModel(
         collectWebSocketUpdates()
         watchFavoritesChanges()
         observeForegroundEvents()
+        observeConfigurationRestored()
     }
 
     // ── Public actions ─────────────────────────────────────────────────────────
@@ -205,6 +206,16 @@ class DashboardViewModel(
     private fun observeForegroundEvents() {
         viewModelScope.launch {
             appEvents.foregroundEvents.collect { onAppForegrounded() }
+        }
+    }
+
+    /** Clears cached entity states after backup restore so nothing stale is shown. */
+    private fun observeConfigurationRestored() {
+        viewModelScope.launch {
+            appEvents.configurationRestoredEvents.collect {
+                _entityStateMap.value = emptyMap()
+                fetchInitialSnapshot()
+            }
         }
     }
 

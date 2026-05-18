@@ -75,6 +75,28 @@ internal class DashboardPreferencesStore(
         scope.launch { dataStore.edit { it[KEY_DENSITY] = density.name } }
     }
 
+    /** Applies all dashboard prefs in one DataStore write — used by backup restore. */
+    fun applyAll(
+        columns: Int,
+        themeMode: ThemeMode,
+        colorPalette: ColorPalette,
+        density: Density
+    ) {
+        require(columns in 1..3) { "Column count must be 1, 2, or 3" }
+        _columns.value = columns
+        _themeMode.value = themeMode
+        _colorPalette.value = colorPalette
+        _density.value = density
+        scope.launch {
+            dataStore.edit {
+                it[KEY_COLUMNS] = columns
+                it[KEY_THEME] = themeMode.name
+                it[KEY_PALETTE] = colorPalette.name
+                it[KEY_DENSITY] = density.name
+            }
+        }
+    }
+
     /**
      * Read the persisted value for [key] synchronously so the very first
      * Compose frame already uses the right scheme — otherwise the user sees

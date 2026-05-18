@@ -59,6 +59,11 @@ internal class ConnectionsStore(
         persist(_connections.value.filter { it.id != id })
     }
 
+    /** Replaces all connections atomically — used by backup restore. */
+    fun replaceAll(list: List<HaConnection>) {
+        persist(list)
+    }
+
     private fun persist(list: List<HaConnection>) {
         securePrefs.edit().putString(KEY_CONNECTIONS, serialize(list)).apply()
         _connections.value = list

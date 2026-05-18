@@ -21,6 +21,8 @@ import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.domain.history.HistorySeriesBuilder
 import se.inix.homeassistantviewer.domain.history.SeriesClassifier
+import se.inix.homeassistantviewer.domain.history.SeriesKind
+import se.inix.homeassistantviewer.domain.history.isPlottableHistoryState
 import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 import se.inix.homeassistantviewer.ui.dashboard.EntityActionDispatcher
 import se.inix.homeassistantviewer.ui.dashboard.EntityKey
@@ -208,8 +210,7 @@ internal class EntityDetailViewModel(
             result.onSuccess { series ->
                 seriesCache[range] = series
                 // "Empty" means no plottable data — either zero rows or every
-                // row was unparseable (e.g. all "unavailable"). The chart needs
-                // at least 2 numeric points to render anything meaningful.
+                // row was unparseable (e.g. all "unavailable").
                 _uiState.value = if (!series.hasPlottableData())
                     EntityDetailUiState.Empty(latestCurrentState)
                 else
@@ -272,7 +273,7 @@ internal class EntityDetailViewModel(
                 value = projected,
                 rawState = newState.state
             )
-            existingSeries.copy(points = existingSeries.points + newPoint)
+            appendPoint(existingSeries, newPoint)
         } else {
             existingSeries
         }
@@ -283,16 +284,21 @@ internal class EntityDetailViewModel(
         _uiState.value = EntityDetailUiState.Loaded(updatedSeries, newState)
     }
 
+    /** Appends [point] and extends [SeriesKind.Categorical.states] when needed. */
+    private fun appendPoint(series: HistorySeries, point: HistoryPoint): HistorySeries {
+        val withPoint = series.copy(points = series.points + point)
+        val kind = withPoint.kind
+        if (kind is SeriesKind.Categorical &&
+            isPlottableHistoryState(point.rawState) &&
+            point.rawState !in kind.states
+        ) {
+            return withPoint.copy(kind = kind.copy(states = kind.states + point.rawState))
+        }
+        return withPoint
+    }
+
     companion object {
         const val ARG_CONNECTION_ID = "connectionId"
         const val ARG_ENTITY_ID = "entityId"
     }
 }
-
-/**
- * A series is "plottable" only if it has at least two points with non-null
- * projected values. A single point can't form a line, and an all-null
- * series (e.g. every row was "unavailable") would render as an empty chart.
- */
-private fun HistorySeries.hasPlottableData(): Boolean =
-    points.count { it.value != null } >= 2

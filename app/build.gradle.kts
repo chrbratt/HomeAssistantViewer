@@ -1,5 +1,4 @@
 plugins {
-    id("base")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
@@ -7,18 +6,14 @@ plugins {
 
 android {
     namespace = "se.inix.homeassistantviewer"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "se.inix.homeassistantviewer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.3"
+        versionCode = 6
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -45,12 +40,9 @@ android {
     }
 }
 
-// Rename output APK/AAB: HomeAssistantViewer-v1.0.0-release.apk / .aab
-afterEvaluate {
-    configure<com.android.build.api.dsl.ApplicationExtension> {
-        val vName = defaultConfig.versionName
-        base.archivesName.set("HomeAssistantViewer-v${vName}")
-    }
+// Sätter namnet på APK/AAB-filerna
+base {
+    archivesName.set("HomeAssistantViewer-v${android.defaultConfig.versionName}")
 }
 
 // Create symbols.zip from merged native libs (from dependencies like OkHttp, Camera, etc.)

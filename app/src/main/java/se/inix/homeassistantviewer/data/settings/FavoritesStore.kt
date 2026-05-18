@@ -102,6 +102,11 @@ internal class FavoritesStore(
         })
     }
 
+    /** Replaces the full favourites list — used by backup restore. */
+    fun replaceAll(list: List<FavoriteItem>) {
+        update(list)
+    }
+
     private fun update(list: List<FavoriteItem>) {
         _favorites.value = list
         scope.launch { dataStore.edit { it[KEY] = FavoritesCodec.serialize(list) } }

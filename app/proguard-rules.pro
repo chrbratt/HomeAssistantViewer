@@ -13,6 +13,7 @@
 # Keep all data classes that are serialized/deserialized by Moshi so that
 # field names and constructors survive minification.
 -keep class se.inix.homeassistantviewer.data.model.** { *; }
+-keep class se.inix.homeassistantviewer.data.backup.** { *; }
 
 # Moshi generated adapters (KSP codegen) — names end with JsonAdapter.
 -keep class **JsonAdapter { *; }

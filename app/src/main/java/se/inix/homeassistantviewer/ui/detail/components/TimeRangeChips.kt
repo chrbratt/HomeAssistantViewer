@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 
 /**
- * Single row of three filter chips for the chart's time window.
+ * Single row of filter chips for the chart's time window.
  *
  * Separated from [EntityDetailScreen] so the chip row can be previewed and
  * reused independently — and so the screen layout file stays under 100

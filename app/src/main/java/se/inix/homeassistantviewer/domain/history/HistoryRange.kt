@@ -14,7 +14,8 @@ import java.time.Duration
 enum class HistoryRange(val duration: Duration, val label: String) {
     Hour(Duration.ofHours(1), "1 h"),
     Day(Duration.ofHours(24), "24 h"),
-    Week(Duration.ofDays(7), "7 d");
+    Week(Duration.ofDays(7), "7 d"),
+    Month(Duration.ofDays(30), "30 d");
 
     companion object {
         val Default: HistoryRange = Day

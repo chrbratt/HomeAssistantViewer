@@ -62,4 +62,18 @@ class DownsamplerTest {
         val out = Downsampler.downsample(input, 2)
         assertEquals(input, out)
     }
+
+    @Test
+    fun `categorical downsample keeps last state per bucket`() {
+        val input = (0 until 100).map {
+            HistoryPoint(
+                timestamp = Instant.ofEpochSecond(it.toLong()),
+                value = null,
+                rawState = if (it < 50) "sunny" else "cloudy"
+            )
+        }
+        val out = Downsampler.downsampleCategorical(input, 10)
+        assertTrue(out.size <= 10)
+        assertEquals("cloudy", out.last().rawState)
+    }
 }

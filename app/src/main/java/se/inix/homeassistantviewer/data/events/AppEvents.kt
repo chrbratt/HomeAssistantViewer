@@ -16,7 +16,19 @@ class AppEvents {
     /** Emitted every time the process transitions from background to foreground. */
     val foregroundEvents: SharedFlow<Unit> = _foregroundEvents.asSharedFlow()
 
+    private val _configurationRestoredEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /**
+     * Emitted after a backup/snapshot restore replaces connections, favourites
+     * or dashboard settings — listeners should discard cached UI state.
+     */
+    val configurationRestoredEvents: SharedFlow<Unit> =
+        _configurationRestoredEvents.asSharedFlow()
+
     fun notifyForeground() {
         _foregroundEvents.tryEmit(Unit)
+    }
+
+    fun notifyConfigurationRestored() {
+        _configurationRestoredEvents.tryEmit(Unit)
     }
 }

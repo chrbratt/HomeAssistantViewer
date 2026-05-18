@@ -2,6 +2,9 @@ package se.inix.homeassistantviewer.di
 
 import android.content.Context
 import okhttp3.OkHttpClient
+import se.inix.homeassistantviewer.data.backup.BackupCodec
+import se.inix.homeassistantviewer.data.backup.BackupImporter
+import se.inix.homeassistantviewer.data.backup.InternalSnapshotStore
 import se.inix.homeassistantviewer.data.events.AppEvents
 import se.inix.homeassistantviewer.data.ha.HomeAssistantConnectionTester
 import se.inix.homeassistantviewer.data.settings.SettingsRepository
@@ -46,5 +49,15 @@ class AppContainer(private val context: Context) {
     /** Singleton pool — one WS + REST client pair per configured connection. */
     val connectionPool: ConnectionPool by lazy {
         ConnectionPool(settingsRepository, sharedOkHttpClient)
+    }
+
+    val backupCodec: BackupCodec by lazy { BackupCodec() }
+
+    val backupImporter: BackupImporter by lazy {
+        BackupImporter(settingsRepository, appEvents)
+    }
+
+    val internalSnapshotStore: InternalSnapshotStore by lazy {
+        InternalSnapshotStore(context, backupCodec)
     }
 }

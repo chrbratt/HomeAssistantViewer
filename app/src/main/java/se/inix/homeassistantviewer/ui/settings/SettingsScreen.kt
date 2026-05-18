@@ -37,8 +37,12 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,9 +68,21 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val colorPalette by viewModel.colorPalette.collectAsStateWithLifecycle()
     val density by viewModel.density.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel) {
+        viewModel.backupFeedbackEvents.collect { feedback ->
+            val message = when (feedback) {
+                is SettingsViewModel.BackupFeedback.Success -> feedback.message
+                is SettingsViewModel.BackupFeedback.Error -> feedback.message
+            }
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
@@ -194,6 +210,8 @@ fun SettingsScreen(
                 selected = colorPalette,
                 onSelect = viewModel::saveColorPalette
             )
+
+            BackupRestoreSection(viewModel = viewModel)
 
             NavigationRow(
                 icon = Icons.Rounded.Info,

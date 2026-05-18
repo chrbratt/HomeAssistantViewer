@@ -25,7 +25,10 @@ object AppViewModelProvider {
         }
         initializer {
             SettingsViewModel(
-                settingsRepository = stugaApplication().container.settingsRepository
+                settingsRepository = stugaApplication().container.settingsRepository,
+                backupCodec = stugaApplication().container.backupCodec,
+                backupImporter = stugaApplication().container.backupImporter,
+                internalSnapshotStore = stugaApplication().container.internalSnapshotStore
             )
         }
         initializer {

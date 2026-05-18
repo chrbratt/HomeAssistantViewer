@@ -14,8 +14,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import se.inix.homeassistantviewer.BuildConfig
+import se.inix.homeassistantviewer.data.backup.AppBackupSnapshot
+import se.inix.homeassistantviewer.data.backup.DashboardBackupPrefs
+import se.inix.homeassistantviewer.data.backup.dashboardBackupPrefs
+import se.inix.homeassistantviewer.data.backup.toBackupItem
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
+import java.time.Instant
 
 private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
@@ -99,6 +105,39 @@ class SettingsRepository(context: Context) {
     fun saveColorPalette(palette: ColorPalette) = dashboardPrefsStore.saveColorPalette(palette)
 
     fun saveDensity(density: Density) = dashboardPrefsStore.saveDensity(density)
+
+    /** Builds a portable snapshot of all user configuration. */
+    fun createBackupSnapshot(): AppBackupSnapshot = AppBackupSnapshot(
+        exportedAt = Instant.now().toString(),
+        appVersion = BuildConfig.VERSION_NAME,
+        connections = connections.value,
+        favorites = favorites.value.map { it.toBackupItem() },
+        dashboard = dashboardBackupPrefs(
+            columns = dashboardColumns.value,
+            themeMode = themeMode.value,
+            colorPalette = colorPalette.value,
+            density = density.value
+        )
+    )
+
+    /**
+     * Replaces all stored configuration. Connections are written first so
+     * favourite [connectionId] references stay valid.
+     */
+    fun restoreBackupSnapshot(
+        connections: List<HaConnection>,
+        favorites: List<FavoriteItem>,
+        dashboard: DashboardBackupPrefs
+    ) {
+        connectionsStore.replaceAll(connections)
+        favoritesStore.replaceAll(favorites)
+        dashboardPrefsStore.applyAll(
+            columns = dashboard.columns,
+            themeMode = ThemeMode.valueOf(dashboard.themeMode),
+            colorPalette = ColorPalette.valueOf(dashboard.colorPalette),
+            density = Density.valueOf(dashboard.density)
+        )
+    }
 
     companion object {
         /** Re-exposed so callers don't need a separate import for URL normalisation. */

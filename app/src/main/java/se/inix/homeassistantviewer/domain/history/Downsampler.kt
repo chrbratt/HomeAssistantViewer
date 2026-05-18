@@ -54,4 +54,37 @@ internal object Downsampler {
             HistoryPoint(timestamp = midTimestamp, value = medianValue, rawState = midRaw)
         }
     }
+
+    /**
+     * Reduces a categorical series by keeping the **last** state in each
+     * time bucket. Step timelines hold state until the next change, so the
+     * trailing observation in a bucket is the state active at bucket end.
+     */
+    fun downsampleCategorical(points: List<HistoryPoint>, targetPoints: Int): List<HistoryPoint> {
+        require(targetPoints > 1) { "targetPoints must be > 1, was $targetPoints" }
+        if (points.size <= targetPoints) return points
+        val first = points.first().timestamp.toEpochMilli()
+        val last = points.last().timestamp.toEpochMilli()
+        if (last <= first) return points
+
+        val bucketWidthMs = ((last - first).toDouble() / targetPoints).coerceAtLeast(1.0)
+        val buckets = Array<MutableList<HistoryPoint>?>(targetPoints) { null }
+
+        for (p in points) {
+            val offset = p.timestamp.toEpochMilli() - first
+            val index = (offset / bucketWidthMs).toInt().coerceIn(0, targetPoints - 1)
+            val bucket = buckets[index] ?: mutableListOf<HistoryPoint>().also { buckets[index] = it }
+            bucket.add(p)
+        }
+
+        return buckets.mapNotNull { bucket ->
+            if (bucket.isNullOrEmpty()) return@mapNotNull null
+            val lastInBucket = bucket.last()
+            HistoryPoint(
+                timestamp = lastInBucket.timestamp,
+                value = null,
+                rawState = lastInBucket.rawState
+            )
+        }
+    }
 }
