@@ -50,7 +50,7 @@ internal fun ActivateCard(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CardIconBadge(

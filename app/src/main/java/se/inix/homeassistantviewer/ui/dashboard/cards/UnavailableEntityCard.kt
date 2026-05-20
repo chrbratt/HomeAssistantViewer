@@ -56,7 +56,7 @@ internal fun UnavailableEntityCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(CardStyle.Padding),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CardIconBadge(
@@ -78,12 +78,12 @@ internal fun UnavailableEntityCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 )
             }
-            IconButton(onClick = onRequestRemove, modifier = Modifier.size(28.dp)) {
+            IconButton(onClick = onRequestRemove, modifier = Modifier.size(CardStyle.ActionIconButtonSize)) {
                 Icon(
                     Icons.Rounded.Close,
                     contentDescription = "Remove from dashboard",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(CardStyle.ActionIconSize)
                 )
             }
         }

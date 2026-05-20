@@ -59,7 +59,7 @@ internal fun ClimateCard(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CardIconBadge(icon = Icons.Rounded.Thermostat, tint = colors.onContainer)
@@ -77,7 +77,7 @@ internal fun ClimateCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(CardStyle.TightSpacing)
             ) {
                 Text(
                     text = "Target",
@@ -91,10 +91,10 @@ internal fun ClimateCard(
                         localTarget = newTemp
                         onAction(EntityAction.SetClimateTemperature(item.connectionId, item.entityId, newTemp.toDouble()))
                     },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(CardStyle.ControlIconButtonSize)
                 ) {
                     Icon(Icons.Rounded.Remove, contentDescription = "Decrease",
-                        tint = colors.onContainer, modifier = Modifier.size(16.dp))
+                        tint = colors.onContainer, modifier = Modifier.size(CardStyle.ControlIconSize))
                 }
                 Text(
                     text = "%.1f°".format(localTarget),
@@ -108,18 +108,18 @@ internal fun ClimateCard(
                         localTarget = newTemp
                         onAction(EntityAction.SetClimateTemperature(item.connectionId, item.entityId, newTemp.toDouble()))
                     },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(CardStyle.ControlIconButtonSize)
                 ) {
                     Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Increase",
-                        tint = colors.onContainer, modifier = Modifier.size(16.dp))
+                        tint = colors.onContainer, modifier = Modifier.size(CardStyle.ControlIconSize))
                 }
             }
         }
 
         if (entity.hvacModes.isNotEmpty()) {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(CardStyle.TightSpacing),
+                verticalArrangement = Arrangement.spacedBy(CardStyle.TightSpacing)
             ) {
                 entity.hvacModes.forEach { mode ->
                     FilterChip(

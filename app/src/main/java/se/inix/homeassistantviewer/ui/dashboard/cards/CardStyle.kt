@@ -18,41 +18,64 @@ import se.inix.homeassistantviewer.data.settings.Density
  */
 internal data class CardSpacing(
     val padding: Dp,
+    /** Vertical gap inside [DashboardCardShell] and horizontal gap in card rows. */
     val spacing: Dp,
+    /** Tighter gap for chips, cover buttons, and header trailing icons. */
+    val tightSpacing: Dp,
     val iconBoxSize: Dp,
     val iconSize: Dp,
     val gridContentPadding: Dp,
     val gridItemSpacing: Dp,
+    val sliderHeight: Dp,
+    val switchScale: Float,
+    val switchRowHeight: Dp,
+    val actionIconButtonSize: Dp,
+    val actionIconSize: Dp,
+    val actionGap: Dp,
+    val controlIconButtonSize: Dp,
+    val controlIconSize: Dp,
+    val primaryControlIconButtonSize: Dp,
+    val primaryControlIconSize: Dp,
 ) {
     companion object {
-        /**
-         * Numbers chosen for a ~30% vertical-footprint reduction vs the
-         * original Material default-ish 16/10/40/22 sizing, while
-         * keeping touch targets ≥ 36 dp (M3 adds its own
-         * `minimumInteractiveComponentSize` on switches/icon-buttons).
-         */
         val Comfortable = CardSpacing(
             padding = 12.dp,
             spacing = 6.dp,
+            tightSpacing = 4.dp,
             iconBoxSize = 32.dp,
             iconSize = 18.dp,
             gridContentPadding = 8.dp,
             gridItemSpacing = 8.dp,
+            sliderHeight = 48.dp,
+            switchScale = 1f,
+            switchRowHeight = 48.dp,
+            actionIconButtonSize = 28.dp,
+            actionIconSize = 16.dp,
+            actionGap = 2.dp,
+            controlIconButtonSize = 32.dp,
+            controlIconSize = 20.dp,
+            primaryControlIconButtonSize = 40.dp,
+            primaryControlIconSize = 28.dp,
         )
 
-        /**
-         * Tighter spacing for users who want more cards visible at once.
-         * Padding/spacing shrink by ~33%; the icon badge shrinks slightly
-         * so it doesn't visually dominate the smaller card. Grid spacing
-         * halves so cards almost butt up against each other.
-         */
         val Compact = CardSpacing(
-            padding = 8.dp,
-            spacing = 4.dp,
+            padding = 6.dp,
+            spacing = 2.dp,
+            tightSpacing = 2.dp,
             iconBoxSize = 26.dp,
             iconSize = 14.dp,
             gridContentPadding = 4.dp,
-            gridItemSpacing = 4.dp,
+            gridItemSpacing = 2.dp,
+            sliderHeight = 32.dp,
+            switchScale = 0.88f,
+            switchRowHeight = 36.dp,
+            actionIconButtonSize = 24.dp,
+            actionIconSize = 14.dp,
+            actionGap = 1.dp,
+            controlIconButtonSize = 28.dp,
+            controlIconSize = 16.dp,
+            primaryControlIconButtonSize = 34.dp,
+            primaryControlIconSize = 22.dp,
         )
 
         fun forDensity(density: Density): CardSpacing = when (density) {
@@ -79,8 +102,30 @@ internal object CardStyle {
         @Composable get() = LocalCardSpacing.current.padding
     val Spacing: Dp
         @Composable get() = LocalCardSpacing.current.spacing
+    val TightSpacing: Dp
+        @Composable get() = LocalCardSpacing.current.tightSpacing
     val IconBoxSize: Dp
         @Composable get() = LocalCardSpacing.current.iconBoxSize
     val IconSize: Dp
         @Composable get() = LocalCardSpacing.current.iconSize
+    val SliderHeight: Dp
+        @Composable get() = LocalCardSpacing.current.sliderHeight
+    val SwitchScale: Float
+        @Composable get() = LocalCardSpacing.current.switchScale
+    val SwitchRowHeight: Dp
+        @Composable get() = LocalCardSpacing.current.switchRowHeight
+    val ActionIconButtonSize: Dp
+        @Composable get() = LocalCardSpacing.current.actionIconButtonSize
+    val ActionIconSize: Dp
+        @Composable get() = LocalCardSpacing.current.actionIconSize
+    val ActionGap: Dp
+        @Composable get() = LocalCardSpacing.current.actionGap
+    val ControlIconButtonSize: Dp
+        @Composable get() = LocalCardSpacing.current.controlIconButtonSize
+    val ControlIconSize: Dp
+        @Composable get() = LocalCardSpacing.current.controlIconSize
+    val PrimaryControlIconButtonSize: Dp
+        @Composable get() = LocalCardSpacing.current.primaryControlIconButtonSize
+    val PrimaryControlIconSize: Dp
+        @Composable get() = LocalCardSpacing.current.primaryControlIconSize
 }

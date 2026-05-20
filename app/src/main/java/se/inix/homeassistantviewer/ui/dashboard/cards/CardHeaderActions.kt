@@ -24,7 +24,7 @@ internal fun CardHeaderActions(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(CardStyle.ActionGap)
     ) {
         if (onRequestRename != null) {
             CardRenameAction(tint = tint, onClick = onRequestRename)

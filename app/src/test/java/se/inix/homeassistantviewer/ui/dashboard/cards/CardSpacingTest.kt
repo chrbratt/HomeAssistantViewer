@@ -25,12 +25,27 @@ class CardSpacingTest {
         val k = CardSpacing.Compact
         assertTrue("padding must shrink (${c.padding} → ${k.padding})", k.padding < c.padding)
         assertTrue("spacing must shrink (${c.spacing} → ${k.spacing})", k.spacing < c.spacing)
+        assertTrue("tightSpacing must shrink (${c.tightSpacing} → ${k.tightSpacing})", k.tightSpacing < c.tightSpacing)
         assertTrue("iconBoxSize must shrink (${c.iconBoxSize} → ${k.iconBoxSize})", k.iconBoxSize < c.iconBoxSize)
         assertTrue("iconSize must shrink (${c.iconSize} → ${k.iconSize})", k.iconSize < c.iconSize)
         assertTrue("gridContentPadding must shrink (${c.gridContentPadding} → ${k.gridContentPadding})",
             k.gridContentPadding < c.gridContentPadding)
         assertTrue("gridItemSpacing must shrink (${c.gridItemSpacing} → ${k.gridItemSpacing})",
             k.gridItemSpacing < c.gridItemSpacing)
+        assertTrue("sliderHeight must shrink (${c.sliderHeight} → ${k.sliderHeight})", k.sliderHeight < c.sliderHeight)
+        assertTrue("switchScale must shrink (${c.switchScale} → ${k.switchScale})", k.switchScale < c.switchScale)
+        assertTrue("switchRowHeight must shrink (${c.switchRowHeight} → ${k.switchRowHeight})", k.switchRowHeight < c.switchRowHeight)
+        assertTrue("actionIconButtonSize must shrink (${c.actionIconButtonSize} → ${k.actionIconButtonSize})",
+            k.actionIconButtonSize < c.actionIconButtonSize)
+        assertTrue("actionIconSize must shrink (${c.actionIconSize} → ${k.actionIconSize})", k.actionIconSize < c.actionIconSize)
+        assertTrue("actionGap must shrink (${c.actionGap} → ${k.actionGap})", k.actionGap < c.actionGap)
+        assertTrue("controlIconButtonSize must shrink (${c.controlIconButtonSize} → ${k.controlIconButtonSize})",
+            k.controlIconButtonSize < c.controlIconButtonSize)
+        assertTrue("controlIconSize must shrink (${c.controlIconSize} → ${k.controlIconSize})", k.controlIconSize < c.controlIconSize)
+        assertTrue("primaryControlIconButtonSize must shrink (${c.primaryControlIconButtonSize} → ${k.primaryControlIconButtonSize})",
+            k.primaryControlIconButtonSize < c.primaryControlIconButtonSize)
+        assertTrue("primaryControlIconSize must shrink (${c.primaryControlIconSize} → ${k.primaryControlIconSize})",
+            k.primaryControlIconSize < c.primaryControlIconSize)
     }
 
     @Test

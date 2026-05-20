@@ -14,7 +14,6 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,36 +77,36 @@ internal fun MediaPlayerCard(
             ) {
                 IconButton(
                     onClick = { onAction(EntityAction.MediaPrevious(item.connectionId, item.entityId)) },
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(CardStyle.ControlIconButtonSize)
                 ) {
                     Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous",
-                        tint = colors.onContainer, modifier = Modifier.size(22.dp))
+                        tint = colors.onContainer, modifier = Modifier.size(CardStyle.ControlIconSize))
                 }
                 IconButton(
                     onClick = { onAction(EntityAction.MediaPlayPause(item.connectionId, item.entityId)) },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(CardStyle.PrimaryControlIconButtonSize)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = colors.onContainer,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(CardStyle.PrimaryControlIconSize)
                     )
                 }
                 IconButton(
                     onClick = { onAction(EntityAction.MediaNext(item.connectionId, item.entityId)) },
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(CardStyle.ControlIconButtonSize)
                 ) {
                     Icon(Icons.Rounded.SkipNext, contentDescription = "Next",
-                        tint = colors.onContainer, modifier = Modifier.size(22.dp))
+                        tint = colors.onContainer, modifier = Modifier.size(CardStyle.ControlIconSize))
                 }
                 if (entity.volumeLevel != null) {
                     Icon(Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = null,
                         tint = colors.onContainer.copy(alpha = 0.6f),
                         modifier = Modifier
-                            .padding(start = 6.dp)
-                            .size(16.dp))
-                    Slider(
+                            .padding(start = CardStyle.Spacing)
+                            .size(CardStyle.ActionIconSize))
+                    CardSlider(
                         value = localVolume,
                         onValueChange = { isDragging = true; localVolume = it },
                         onValueChangeFinished = {

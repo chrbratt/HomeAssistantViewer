@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +52,7 @@ internal fun InputNumberCard(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CardIconBadge(icon = Icons.Rounded.Sensors, tint = colors.onContainer)
@@ -66,7 +65,7 @@ internal fun InputNumberCard(
             )
         }
 
-        Slider(
+        CardSlider(
             value = localValue,
             onValueChange = { isDragging = true; localValue = it },
             onValueChangeFinished = {

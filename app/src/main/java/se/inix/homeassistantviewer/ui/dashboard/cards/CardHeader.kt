@@ -46,7 +46,7 @@ internal fun CardHeader(
         Row(
             modifier = modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.TightSpacing)
         ) {
             Text(
                 text = title,

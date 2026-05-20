@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.ui.common.BinaryStateIndicator
 import se.inix.homeassistantviewer.ui.common.NumericValueDisplay
 import se.inix.homeassistantviewer.ui.common.formatSensorValue
@@ -40,7 +39,7 @@ internal fun SensorCard(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
             verticalAlignment = Alignment.CenterVertically
         ) {
             CardIconBadge(

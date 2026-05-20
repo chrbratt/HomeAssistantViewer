@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import se.inix.homeassistantviewer.ui.dashboard.cards.CardStyle
 
 /**
  * Full-width visual row break inserted between dashboard cards so the user
@@ -53,13 +54,13 @@ fun RowBreakDivider(
             .clickable(onClick = onEditTitle)
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(CardStyle.Spacing)
     ) {
         Icon(
             Icons.Rounded.DragHandle,
             contentDescription = null,
             tint = labelColor.copy(alpha = 0.5f),
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(CardStyle.ActionIconSize)
         )
 
         if (title != null && title.isNotBlank()) {
@@ -73,19 +74,19 @@ fun RowBreakDivider(
                 color = labelColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier.padding(horizontal = CardStyle.TightSpacing)
             )
             HorizontalRule(modifier = Modifier.weight(1f), color = ruleColor)
         } else {
             HorizontalRule(modifier = Modifier.weight(1f), color = ruleColor)
         }
 
-        IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+        IconButton(onClick = onRemove, modifier = Modifier.size(CardStyle.ActionIconButtonSize)) {
             Icon(
                 Icons.Rounded.Close,
                 contentDescription = "Remove row break",
                 tint = labelColor.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(CardStyle.ActionIconSize)
             )
         }
     }

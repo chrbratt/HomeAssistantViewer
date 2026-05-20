@@ -27,13 +27,13 @@ internal fun CardHistoryAction(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(28.dp),
+        modifier = modifier.size(CardStyle.ActionIconButtonSize),
         colors = IconButtonDefaults.iconButtonColors(contentColor = tint)
     ) {
         Icon(
             imageVector = Icons.Rounded.Timeline,
             contentDescription = "Open history",
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(CardStyle.ActionIconSize)
         )
     }
 }
