@@ -14,12 +14,12 @@ import se.inix.homeassistantviewer.data.settings.ThemeMode
  */
 @JsonClass(generateAdapter = true)
 data class AppBackupSnapshot(
-    @Json(name = "formatVersion") val formatVersion: Int = CURRENT_FORMAT_VERSION,
-    @Json(name = "exportedAt") val exportedAt: String,
-    @Json(name = "appVersion") val appVersion: String,
-    @Json(name = "connections") val connections: List<HaConnection>,
-    @Json(name = "favorites") val favorites: List<FavoriteBackupItem>,
-    @Json(name = "dashboard") val dashboard: DashboardBackupPrefs,
+    @param:Json(name = "formatVersion") val formatVersion: Int = CURRENT_FORMAT_VERSION,
+    @param:Json(name = "exportedAt") val exportedAt: String,
+    @param:Json(name = "appVersion") val appVersion: String,
+    @param:Json(name = "connections") val connections: List<HaConnection>,
+    @param:Json(name = "favorites") val favorites: List<FavoriteBackupItem>,
+    @param:Json(name = "dashboard") val dashboard: DashboardBackupPrefs,
 ) {
     companion object {
         const val CURRENT_FORMAT_VERSION = 1
@@ -29,21 +29,21 @@ data class AppBackupSnapshot(
 /** JSON representation of one dashboard slot (entity or row-break divider). */
 @JsonClass(generateAdapter = true)
 data class FavoriteBackupItem(
-    @Json(name = "type") val type: String,
-    @Json(name = "connectionId") val connectionId: String? = null,
-    @Json(name = "entityId") val entityId: String? = null,
+    @param:Json(name = "type") val type: String,
+    @param:Json(name = "connectionId") val connectionId: String? = null,
+    @param:Json(name = "entityId") val entityId: String? = null,
     /** User-chosen display name overriding HA's friendly_name; null = use HA name. */
-    @Json(name = "customName") val customName: String? = null,
-    @Json(name = "id") val id: String? = null,
-    @Json(name = "title") val title: String? = null,
+    @param:Json(name = "customName") val customName: String? = null,
+    @param:Json(name = "id") val id: String? = null,
+    @param:Json(name = "title") val title: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class DashboardBackupPrefs(
-    @Json(name = "columns") val columns: Int,
-    @Json(name = "themeMode") val themeMode: String,
-    @Json(name = "colorPalette") val colorPalette: String,
-    @Json(name = "density") val density: String,
+    @param:Json(name = "columns") val columns: Int,
+    @param:Json(name = "themeMode") val themeMode: String,
+    @param:Json(name = "colorPalette") val colorPalette: String,
+    @param:Json(name = "density") val density: String,
 )
 
 fun FavoriteItem.toBackupItem(): FavoriteBackupItem = when (this) {

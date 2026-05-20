@@ -20,6 +20,6 @@ import com.squareup.moshi.Json
  *    no X-coordinate to plot.
  */
 data class HaHistoryRow(
-    @Json(name = "state") val state: String?,
-    @Json(name = "last_changed") val lastChanged: String?
+    @param:Json(name = "state") val state: String?,
+    @param:Json(name = "last_changed") val lastChanged: String?
 )

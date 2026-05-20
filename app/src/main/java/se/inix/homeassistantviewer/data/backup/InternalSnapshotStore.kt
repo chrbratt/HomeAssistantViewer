@@ -118,9 +118,9 @@ class InternalSnapshotStore(
 
     @JsonClass(generateAdapter = true)
     data class SnapshotMeta(
-        @Json(name = "id") val id: String,
-        @Json(name = "name") val name: String,
-        @Json(name = "savedAtEpoch") val savedAtEpoch: Long
+        @param:Json(name = "id") val id: String,
+        @param:Json(name = "name") val name: String,
+        @param:Json(name = "savedAtEpoch") val savedAtEpoch: Long
     )
 
     companion object {

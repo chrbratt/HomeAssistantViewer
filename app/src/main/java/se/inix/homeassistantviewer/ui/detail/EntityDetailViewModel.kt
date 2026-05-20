@@ -269,7 +269,7 @@ internal class EntityDetailViewModel(
         val shouldAppend = ts != null && (lastTs == null || ts.isAfter(lastTs))
         val updatedSeries = if (shouldAppend) {
             val newPoint = HistoryPoint(
-                timestamp = ts!!,
+                timestamp = ts,
                 value = projected,
                 rawState = newState.state
             )
