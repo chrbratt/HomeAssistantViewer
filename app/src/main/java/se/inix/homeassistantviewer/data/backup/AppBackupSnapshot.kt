@@ -2,6 +2,7 @@ package se.inix.homeassistantviewer.data.backup
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import se.inix.homeassistantviewer.data.model.ComparisonEntity
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.settings.ColorPalette
@@ -20,10 +21,25 @@ data class AppBackupSnapshot(
     @param:Json(name = "connections") val connections: List<HaConnection>,
     @param:Json(name = "favorites") val favorites: List<FavoriteBackupItem>,
     @param:Json(name = "dashboard") val dashboard: DashboardBackupPrefs,
+    /** Entity keys marked for comparison graph; absent in v1 backups. */
+    @param:Json(name = "comparisonSelection") val comparisonSelection: List<String>? = null,
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = 1
+        const val CURRENT_FORMAT_VERSION = 2
     }
+}
+
+fun ComparisonEntity.toBackupKey(): String = key
+
+fun String.toComparisonEntityOrNull(): ComparisonEntity? {
+    if (!startsWith("e:")) return null
+    val body = removePrefix("e:")
+    val slash = body.indexOf('/')
+    if (slash <= 0 || slash >= body.length - 1) return null
+    val connectionId = body.substring(0, slash)
+    val entityId = body.substring(slash + 1)
+    if (connectionId.isBlank() || entityId.isBlank()) return null
+    return ComparisonEntity(connectionId, entityId)
 }
 
 /** JSON representation of one dashboard slot (entity or row-break divider). */

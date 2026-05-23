@@ -24,7 +24,8 @@ internal fun LockCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val isLocked = entity.state == "locked"
@@ -47,7 +48,8 @@ internal fun LockCard(
         colors = colors,
         modifier = modifier,
         onClick = toggle,
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

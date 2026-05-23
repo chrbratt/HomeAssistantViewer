@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 /**
  * Trailing-slot icon group used by [DashboardCardShell]. Composed once here

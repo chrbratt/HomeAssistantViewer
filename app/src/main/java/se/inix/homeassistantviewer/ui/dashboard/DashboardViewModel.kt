@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import se.inix.homeassistantviewer.data.events.AppEvents
+import se.inix.homeassistantviewer.data.model.ComparisonEntity
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.settings.SettingsRepository
@@ -195,6 +196,17 @@ class DashboardViewModel(
 
     fun setDividerTitle(id: String, title: String?) {
         settingsRepository.setDividerTitle(id, title)
+    }
+
+    val comparisonSelection: StateFlow<Set<ComparisonEntity>> =
+        settingsRepository.comparisonSelection
+
+    fun toggleComparisonSelection(connectionId: String, entityId: String) {
+        settingsRepository.toggleComparisonSelection(connectionId, entityId)
+    }
+
+    fun clearComparisonSelection() {
+        settingsRepository.clearComparisonSelection()
     }
 
     fun performAction(action: EntityAction) {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
@@ -34,11 +35,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,6 +62,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToConnections: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToComparison: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -68,6 +70,7 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val colorPalette by viewModel.colorPalette.collectAsStateWithLifecycle()
     val density by viewModel.density.collectAsStateWithLifecycle()
+    val comparisonSelectionCount by viewModel.comparisonSelectionCount.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
@@ -107,6 +110,17 @@ fun SettingsScreen(
                 title = "Connections",
                 subtitle = "Manage Home Assistant installations",
                 onClick = onNavigateToConnections
+            )
+
+            NavigationRow(
+                icon = Icons.AutoMirrored.Rounded.ShowChart,
+                title = "Comparison graph",
+                subtitle = if (comparisonSelectionCount == 0) {
+                    "No entities selected"
+                } else {
+                    "$comparisonSelectionCount ${if (comparisonSelectionCount == 1) "entity" else "entities"} selected"
+                },
+                onClick = onNavigateToComparison
             )
 
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {

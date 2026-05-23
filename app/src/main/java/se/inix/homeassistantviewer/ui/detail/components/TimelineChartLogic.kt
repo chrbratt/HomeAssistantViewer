@@ -5,7 +5,6 @@ import se.inix.homeassistantviewer.domain.history.HistoryPoint
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /** Visible time range for state timelines (epoch seconds). */
 internal data class TimelineWindow(val startEpoch: Long, val endEpoch: Long) {

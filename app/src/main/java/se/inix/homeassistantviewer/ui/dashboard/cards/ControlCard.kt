@@ -31,7 +31,8 @@ internal fun ControlCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val isOn = entity.state == "on"
@@ -62,7 +63,8 @@ internal fun ControlCard(
         colors = colors,
         modifier = modifier,
         onClick = { onAction(EntityAction.Toggle(item.connectionId, item.entityId)) },
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

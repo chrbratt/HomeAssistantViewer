@@ -18,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.domain.entity.inputNumberMax
 import se.inix.homeassistantviewer.domain.entity.inputNumberMin
 import se.inix.homeassistantviewer.domain.entity.inputNumberStep
@@ -32,7 +31,8 @@ internal fun InputNumberCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val currentValue = entity.inputNumberValue ?: return
@@ -48,7 +48,8 @@ internal fun InputNumberCard(
         title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -46,10 +46,17 @@ class BackupImporter(
         val dashboard = parseDashboard(snapshot.dashboard)
             ?: return RestoreResult(success = false, message = "Invalid dashboard settings in backup.")
 
+        val comparisonSelection = snapshot.comparisonSelection
+            .orEmpty()
+            .mapNotNull { it.toComparisonEntityOrNull() }
+            .filter { it.connectionId in connectionIds }
+            .toSet()
+
         settingsRepository.restoreBackupSnapshot(
             connections = connections,
             favorites = favorites,
-            dashboard = dashboard
+            dashboard = dashboard,
+            comparisonSelection = comparisonSelection
         )
         appEvents.notifyConfigurationRestored()
 

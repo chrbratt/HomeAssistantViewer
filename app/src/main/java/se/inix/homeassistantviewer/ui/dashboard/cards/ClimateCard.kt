@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.domain.entity.currentTemperature
 import se.inix.homeassistantviewer.domain.entity.hvacModes
 import se.inix.homeassistantviewer.domain.entity.targetTemperature
@@ -36,7 +35,8 @@ internal fun ClimateCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val currentTemp = entity.currentTemperature
@@ -55,7 +55,8 @@ internal fun ClimateCard(
         title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

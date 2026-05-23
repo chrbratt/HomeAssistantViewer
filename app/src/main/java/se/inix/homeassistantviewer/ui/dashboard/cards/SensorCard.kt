@@ -21,7 +21,8 @@ import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
 internal fun SensorCard(
     item: DashboardItem.Entity,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val icon = getIconForEntity(entity)
@@ -35,7 +36,8 @@ internal fun SensorCard(
         title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

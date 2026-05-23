@@ -1,5 +1,6 @@
 package se.inix.homeassistantviewer.ui.dashboard.cards
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -10,6 +11,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 /**
  * Standard outer shell for every dashboard card. Encapsulates:
@@ -33,11 +35,9 @@ internal fun DashboardCardShell(
     onClick: (() -> Unit)? = null,
     onOpenDetail: (() -> Unit)? = null,
     onRequestRename: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    // Build a single trailing slot that holds zero, one or both action
-    // icons. Keeping the composition here means each domain card just
-    // passes the two callbacks and never has to lay out its own icons.
     val trailing: (@Composable () -> Unit)? =
         if (onOpenDetail == null && onRequestRename == null) null
         else { ->
@@ -47,19 +47,50 @@ internal fun DashboardCardShell(
                 onOpenDetail = onOpenDetail
             )
         }
+
+    val leading: (@Composable () -> Unit)? = comparisonSelection
+        ?.takeIf { it.isSelected }
+        ?.let { selection ->
+            {
+                ComparisonSelectionCheckbox(
+                    visible = true,
+                    checked = true,
+                    onToggle = selection.onToggle,
+                    tint = colors.onContainer
+                )
+            }
+        }
+
     val body: @Composable ColumnScope.() -> Unit = {
         CardHeader(
             title = title,
             color = colors.onContainer,
+            leading = leading,
             trailing = trailing
         )
         content()
     }
+
     val containerColors = CardDefaults.cardColors(containerColor = colors.container)
+    val showSelectionOutline = comparisonSelection?.isSelected == true
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .then(
+            if (showSelectionOutline) {
+                Modifier.border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = MaterialTheme.shapes.large
+                )
+            } else {
+                Modifier
+            }
+        )
+
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
+            modifier = cardModifier,
             shape = MaterialTheme.shapes.large,
             colors = containerColors
         ) {
@@ -71,7 +102,7 @@ internal fun DashboardCardShell(
         }
     } else {
         Card(
-            modifier = modifier.fillMaxWidth(),
+            modifier = cardModifier,
             shape = MaterialTheme.shapes.large,
             colors = containerColors
         ) {

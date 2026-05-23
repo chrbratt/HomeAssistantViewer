@@ -19,6 +19,8 @@ import se.inix.homeassistantviewer.data.backup.AppBackupSnapshot
 import se.inix.homeassistantviewer.data.backup.DashboardBackupPrefs
 import se.inix.homeassistantviewer.data.backup.dashboardBackupPrefs
 import se.inix.homeassistantviewer.data.backup.toBackupItem
+import se.inix.homeassistantviewer.data.backup.toBackupKey
+import se.inix.homeassistantviewer.data.model.ComparisonEntity
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
 import java.time.Instant
@@ -26,8 +28,8 @@ import java.time.Instant
 private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
 /**
- * Façade over the four focused stores. Each concern (connections, favourites,
- * dashboard layout, theme) lives in its own file; this class exists so the rest
+ * Façade over the focused stores. Each concern (connections, favourites,
+ * comparison selection, dashboard layout, theme) lives in its own file; this class exists so the rest
  * of the app keeps a single injection point and so the wiring between the
  * DataStore replay flow and the in-memory stores is in one place.
  */
@@ -50,11 +52,13 @@ class SettingsRepository(context: Context) {
 
     private val connectionsStore = ConnectionsStore(securePrefs)
     private val favoritesStore = FavoritesStore(dataStore, scope)
+    private val comparisonSelectionStore = ComparisonSelectionStore(dataStore, scope)
     private val dashboardPrefsStore = DashboardPreferencesStore(dataStore, scope)
     private val migration = LegacyPreferencesMigration(securePrefs, dataStore)
 
     val connections: StateFlow<List<HaConnection>> = connectionsStore.connections
     val favorites: StateFlow<List<FavoriteItem>> = favoritesStore.favorites
+    val comparisonSelection: StateFlow<Set<ComparisonEntity>> = comparisonSelectionStore.selection
     val dashboardColumns: StateFlow<Int> = dashboardPrefsStore.columns
     val themeMode: StateFlow<ThemeMode> = dashboardPrefsStore.themeMode
     val colorPalette: StateFlow<ColorPalette> = dashboardPrefsStore.colorPalette
@@ -65,6 +69,7 @@ class SettingsRepository(context: Context) {
             migration.runIfNeeded()
             dataStore.data.collect { prefs ->
                 favoritesStore.onDataStorePayload(prefs[FavoritesStore.KEY])
+                comparisonSelectionStore.onDataStorePayload(prefs[ComparisonSelectionStore.KEY])
                 dashboardPrefsStore.onDataStorePayload(prefs)
             }
         }
@@ -79,12 +84,32 @@ class SettingsRepository(context: Context) {
     fun deleteConnection(id: String) {
         connectionsStore.delete(id)
         favoritesStore.stripConnection(id)
+        comparisonSelectionStore.stripConnection(id)
     }
 
-    fun toggleFavorite(connectionId: String, entityId: String) =
-        favoritesStore.toggleEntity(connectionId, entityId)
+    fun toggleComparisonSelection(connectionId: String, entityId: String) =
+        comparisonSelectionStore.toggle(connectionId, entityId)
 
-    fun removeFavorite(item: FavoriteItem) = favoritesStore.remove(item)
+    fun clearComparisonSelection() = comparisonSelectionStore.clear()
+
+    fun removeComparisonSelection(connectionId: String, entityId: String) =
+        comparisonSelectionStore.removeEntity(connectionId, entityId)
+
+    fun toggleFavorite(connectionId: String, entityId: String) {
+        val targetKey = FavoriteItem.Entity(connectionId, entityId).key
+        val wasFavorite = favorites.value.any { it.key == targetKey }
+        favoritesStore.toggleEntity(connectionId, entityId)
+        if (wasFavorite) {
+            comparisonSelectionStore.removeEntity(connectionId, entityId)
+        }
+    }
+
+    fun removeFavorite(item: FavoriteItem) {
+        favoritesStore.remove(item)
+        if (item is FavoriteItem.Entity) {
+            comparisonSelectionStore.removeEntity(item.connectionId, item.entityId)
+        }
+    }
 
     fun addDivider(): FavoriteItem.Divider = favoritesStore.addDivider()
 
@@ -117,7 +142,8 @@ class SettingsRepository(context: Context) {
             themeMode = themeMode.value,
             colorPalette = colorPalette.value,
             density = density.value
-        )
+        ),
+        comparisonSelection = comparisonSelection.value.map { it.toBackupKey() }
     )
 
     /**
@@ -127,10 +153,12 @@ class SettingsRepository(context: Context) {
     fun restoreBackupSnapshot(
         connections: List<HaConnection>,
         favorites: List<FavoriteItem>,
-        dashboard: DashboardBackupPrefs
+        dashboard: DashboardBackupPrefs,
+        comparisonSelection: Set<ComparisonEntity> = emptySet()
     ) {
         connectionsStore.replaceAll(connections)
         favoritesStore.replaceAll(favorites)
+        comparisonSelectionStore.replaceAll(comparisonSelection)
         dashboardPrefsStore.applyAll(
             columns = dashboard.columns,
             themeMode = ThemeMode.valueOf(dashboard.themeMode),

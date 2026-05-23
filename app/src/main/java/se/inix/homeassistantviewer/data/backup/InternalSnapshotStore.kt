@@ -6,6 +6,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import se.inix.homeassistantviewer.data.backup.InternalSnapshotStore.Companion.MAX_SNAPSHOTS
 import java.io.File
 import java.time.Instant
 import java.util.UUID

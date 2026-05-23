@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.domain.entity.mediaArtist
 import se.inix.homeassistantviewer.domain.entity.mediaTitle
 import se.inix.homeassistantviewer.domain.entity.volumeLevel
@@ -37,7 +36,8 @@ internal fun MediaPlayerCard(
     item: DashboardItem.Entity,
     onAction: (EntityAction) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenDetail: (() -> Unit)? = null
+    onOpenDetail: (() -> Unit)? = null,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity ?: return
     val isPlaying = entity.state == "playing"
@@ -57,7 +57,8 @@ internal fun MediaPlayerCard(
         title = cardDisplayTitle(item),
         colors = colors,
         modifier = modifier,
-        onOpenDetail = onOpenDetail
+        onOpenDetail = onOpenDetail,
+        comparisonSelection = comparisonSelection
     ) {
         if (entity.mediaTitle != null || entity.mediaArtist != null) {
             Text(

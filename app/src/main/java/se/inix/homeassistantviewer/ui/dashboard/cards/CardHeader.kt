@@ -1,9 +1,9 @@
 package se.inix.homeassistantviewer.ui.dashboard.cards
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,21 +18,19 @@ import androidx.compose.ui.text.style.TextOverflow
  * on its own line lets long entity names use the full card width instead of
  * fighting with the icon + switch for the same horizontal space.
  *
- * Caller decides the color so light/dark/active states stay consistent with
- * the surrounding [Card] surface.
- *
- * The optional [trailing] slot is used by every entity card to show a small
- * "open history" icon. Keeping it on the shared header means future style
- * tweaks (size, color, icon choice) happen in one file rather than eight.
+ * The optional [leading] slot holds the comparison-selection checkbox when
+ * active — it animates in horizontally so the title shifts rather than
+ * being covered by an overlay.
  */
 @Composable
 internal fun CardHeader(
     title: String,
     color: Color,
     modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
-    if (trailing == null) {
+    if (leading == null && trailing == null) {
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
@@ -44,10 +42,13 @@ internal fun CardHeader(
         )
     } else {
         Row(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier
+                .fillMaxWidth()
+                .animateContentSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CardStyle.TightSpacing)
         ) {
+            leading?.invoke()
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -57,7 +58,7 @@ internal fun CardHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            trailing()
+            trailing?.invoke()
         }
     }
 }

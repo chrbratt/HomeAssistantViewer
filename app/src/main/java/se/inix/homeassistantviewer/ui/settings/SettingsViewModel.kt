@@ -7,9 +7,12 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import se.inix.homeassistantviewer.data.backup.BACKUP_FILE_SUFFIX
@@ -36,6 +39,10 @@ class SettingsViewModel(
     val themeMode: StateFlow<ThemeMode> = settingsRepository.themeMode
     val colorPalette: StateFlow<ColorPalette> = settingsRepository.colorPalette
     val density: StateFlow<Density> = settingsRepository.density
+
+    val comparisonSelectionCount: StateFlow<Int> = settingsRepository.comparisonSelection
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private val _internalSnapshots =
         kotlinx.coroutines.flow.MutableStateFlow(internalSnapshotStore.list())

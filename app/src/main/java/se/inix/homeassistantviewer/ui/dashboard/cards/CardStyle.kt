@@ -5,6 +5,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.data.settings.Density
+import se.inix.homeassistantviewer.ui.dashboard.cards.CardSpacing.Companion.Comfortable
+import se.inix.homeassistantviewer.ui.dashboard.cards.CardSpacing.Companion.Compact
 
 /**
  * Visual spacing tokens used by every dashboard card and the grid that

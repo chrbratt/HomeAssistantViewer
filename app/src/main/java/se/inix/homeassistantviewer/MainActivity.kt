@@ -8,6 +8,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -17,13 +19,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.lifecycle.SavedStateHandle
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.map
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 import se.inix.homeassistantviewer.ui.about.AboutScreen
+import se.inix.homeassistantviewer.ui.comparison.ComparisonScreen
+import se.inix.homeassistantviewer.ui.comparison.ComparisonViewModel
+import se.inix.homeassistantviewer.ui.comparison.PoolComparisonHistoryDataSource
 import se.inix.homeassistantviewer.ui.connections.ConnectionsScreen
 import se.inix.homeassistantviewer.ui.dashboard.DashboardScreen
 import se.inix.homeassistantviewer.ui.dashboard.cards.CardSpacing
@@ -79,6 +82,7 @@ fun StugaApp() {
             DashboardScreen(
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToEntityPicker = { navController.navigate("entity_picker") },
+                onNavigateToComparison = { navController.navigate("comparison") },
                 onNavigateToEntityDetail = { connectionId, entityId ->
                     // URL-encode entity IDs so a dot like "sensor.kitchen" passes through
                     // the route segment cleanly. Connection IDs are UUIDs so they don't
@@ -93,7 +97,8 @@ fun StugaApp() {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToConnections = { navController.navigate("connections") },
-                onNavigateToAbout = { navController.navigate("about") }
+                onNavigateToAbout = { navController.navigate("about") },
+                onNavigateToComparison = { navController.navigate("comparison") }
             )
         }
         composable("entity_picker") {
@@ -104,6 +109,24 @@ fun StugaApp() {
         }
         composable("about") {
             AboutScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable("comparison") {
+            val container = (LocalContext.current.applicationContext as StugaApplication).container
+            val viewModel: ComparisonViewModel = viewModel(factory = viewModelFactory {
+                initializer {
+                    ComparisonViewModel(
+                        dataSource = PoolComparisonHistoryDataSource(container.connectionPool),
+                        comparisonSelection = container.settingsRepository.comparisonSelection,
+                        favorites = container.settingsRepository.favorites,
+                        connections = container.settingsRepository.connections,
+                        clearComparisonSelection = container.settingsRepository::clearComparisonSelection
+                    )
+                }
+            })
+            ComparisonScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = "entity_detail/{${EntityDetailViewModel.ARG_CONNECTION_ID}}/{${EntityDetailViewModel.ARG_ENTITY_ID}}",
@@ -147,6 +170,7 @@ fun StugaApp() {
                         saveCustomName = { name ->
                             repo.setFavoriteCustomName(connectionId, entityId, name)
                         },
+                        connections = repo.connections,
                         // Lets the detail screen dispatch toggles, brightness,
                         // cover positions etc. via the same dispatcher path
                         // the dashboard uses.

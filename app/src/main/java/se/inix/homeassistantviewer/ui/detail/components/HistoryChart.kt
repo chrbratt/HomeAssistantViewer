@@ -2,10 +2,11 @@ package se.inix.homeassistantviewer.ui.detail.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
@@ -18,9 +19,6 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.cartesian.Zoom
-import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.common.Fill
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
@@ -68,6 +66,7 @@ private fun NumericHistoryChart(
     modifier: Modifier = Modifier
 ) {
     val frame = remember(series) { buildFrame(series) } ?: return
+    val plotPoints = remember(frame) { frame.toPlotPoints() }
 
     val lineColor = MaterialTheme.colorScheme.primary
     val areaColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
@@ -76,9 +75,20 @@ private fun NumericHistoryChart(
         rangeTimeFormatter(range, frame.xOffsetSeconds)
     }
 
+    val scrollState = rememberVicoScrollState()
+    val zoomState = rememberVicoZoomState(
+        zoomEnabled = true,
+        initialZoom = Zoom.Content
+    )
     val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(frame) {
-        modelProducer.runTransaction { lineSeries { series(frame.xs, frame.ys) } }
+
+    SyncAdaptiveYRange(
+        plotPoints = plotPoints,
+        modelProducer = modelProducer,
+        scrollState = scrollState,
+        zoomState = zoomState
+    ) {
+        lineSeries { series(frame.xs, frame.ys) }
     }
 
     CartesianChartHost(
@@ -88,19 +98,15 @@ private fun NumericHistoryChart(
                     LineCartesianLayer.rememberLine(
                         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
                         areaFill = LineCartesianLayer.AreaFill.single(Fill(areaColor)),
-                        // Vico 3.1 introduced `Interpolator`, which obsoletes the
-                        // deprecated `PointConnector` we used in 2.x. `cubic()`
-                        // is the drop-in replacement and produces an identical
-                        // curve to the old `PointConnector.cubic()`.
                         interpolator = LineCartesianLayer.Interpolator.cubic()
                     )
-                )
+                ),
+                rangeProvider = remember { AdaptiveVisibleYRangeProvider }
             ),
-            startAxis = VerticalAxis.rememberStart(
+            startAxis = rememberAdaptiveStartAxis(
                 label = components.label,
-                horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Inside,
                 guideline = components.guideline,
-                line = components.axisLine
+                axisLine = components.axisLine
             ),
             bottomAxis = HorizontalAxis.rememberBottom(
                 label = components.label,
@@ -110,15 +116,9 @@ private fun NumericHistoryChart(
             )
         ),
         modelProducer = modelProducer,
-        // Sizing comes from the caller; the detail screen stretches the
-        // chart to fill the available space in portrait and switches to a
-        // side-by-side layout in landscape.
         modifier = modifier,
-        scrollState = rememberVicoScrollState(),
-        zoomState = rememberVicoZoomState(
-            zoomEnabled = true,
-            initialZoom = Zoom.Content
-        )
+        scrollState = scrollState,
+        zoomState = zoomState
     )
 }
 
@@ -130,21 +130,15 @@ private fun NumericHistoryChart(
  * the edge of `Float` precision — points within ~128 seconds of each
  * other can collapse onto the same X coordinate. We therefore feed the
  * chart **relative seconds** (0 .. range) and reconstruct the absolute
- * timestamp inside the bottom-axis formatter using [xOffsetSeconds].
+ * timestamp inside the bottom-axis formatter using [ChartFrame.xOffsetSeconds].
  */
-private data class ChartFrame(
-    val xs: List<Double>,
-    val ys: List<Double>,
-    val xOffsetSeconds: Long
-)
-
 private fun buildFrame(series: HistorySeries): ChartFrame? {
     val plottable = series.points.filter { it.value != null }
     if (plottable.size < 2) return null
     val offset = plottable.first().timestamp.epochSecond
     val xs = plottable.map { (it.timestamp.epochSecond - offset).toDouble() }
     val ys = plottable.mapNotNull { it.value }
-    return ChartFrame(xs, ys, offset)
+    return buildChartFrame(xs, ys, offset)
 }
 
 /**

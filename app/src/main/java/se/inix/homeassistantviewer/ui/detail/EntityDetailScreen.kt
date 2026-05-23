@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,9 +21,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,8 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.domain.history.HistoryExportFeedback
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.ui.common.EditTextDialog
+import se.inix.homeassistantviewer.ui.common.rememberHistoryCsvExportLauncher
 import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
 import se.inix.homeassistantviewer.ui.dashboard.cards.EntityCard
 import se.inix.homeassistantviewer.ui.detail.components.HistoryChart
@@ -69,6 +75,25 @@ internal fun EntityDetailScreen(
     val customName by viewModel.customName.collectAsStateWithLifecycle()
 
     var renaming by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val launchExport = rememberHistoryCsvExportLauncher(
+        suggestedFileName = { viewModel.suggestExportFileName().orEmpty() },
+        onExportToUri = viewModel::exportToUri
+    )
+    val exportEnabled = when (uiState) {
+        is EntityDetailUiState.Loaded, is EntityDetailUiState.Empty -> viewModel.canExportCurrentRange()
+        else -> false
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.exportFeedbackEvents.collect { feedback ->
+            val message = when (feedback) {
+                is HistoryExportFeedback.Success -> feedback.message
+                is HistoryExportFeedback.Error -> feedback.message
+            }
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     val currentItem = DashboardItem.Entity(
         connectionId = viewModel.connectionId,
@@ -79,6 +104,7 @@ internal fun EntityDetailScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -96,6 +122,12 @@ internal fun EntityDetailScreen(
                 actions = {
                     IconButton(onClick = { renaming = true }) {
                         Icon(Icons.Rounded.Edit, contentDescription = "Rename")
+                    }
+                    IconButton(
+                        onClick = launchExport,
+                        enabled = exportEnabled
+                    ) {
+                        Icon(Icons.Rounded.Download, contentDescription = "Export CSV")
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")

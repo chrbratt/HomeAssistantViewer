@@ -22,7 +22,8 @@ fun EntityCard(
     onRequestRemove: () -> Unit,
     onRequestRename: () -> Unit,
     onOpenDetail: ((connectionId: String, entityId: String) -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    comparisonSelection: ComparisonSelectionUi? = null
 ) {
     val entity = item.entity
     if (entity == null) {
@@ -50,17 +51,53 @@ fun EntityCard(
 
     when (entity.domain) {
         "light", "switch", "input_boolean", "fan" ->
-            ControlCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            ControlCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         "cover" ->
-            CoverCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            CoverCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         "climate" ->
-            ClimateCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            ClimateCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         "lock" ->
-            LockCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            LockCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         "media_player" ->
-            MediaPlayerCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            MediaPlayerCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         "input_number" ->
-            InputNumberCard(item = item, onAction = onAction, onOpenDetail = openDetail, modifier = modifier)
+            InputNumberCard(
+                item = item,
+                onAction = onAction,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
         // Scripts, scenes AND automations share the same "Run" card. A toggle for
         // an automation in HA flips its enabled state — almost never what the
         // user actually wants on a dashboard, so we use automation.trigger via
@@ -72,7 +109,12 @@ fun EntityCard(
         "scene", "script", "automation" ->
             ActivateCard(item = item, onAction = onAction, onRequestRename = onRequestRename, modifier = modifier)
         else ->
-            SensorCard(item = item, onOpenDetail = openDetail, modifier = modifier)
+            SensorCard(
+                item = item,
+                onOpenDetail = openDetail,
+                comparisonSelection = comparisonSelection,
+                modifier = modifier
+            )
     }
 }
 

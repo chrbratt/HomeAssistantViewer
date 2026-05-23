@@ -24,8 +24,34 @@ object HistorySeriesBuilder {
         domain: String,
         unitOfMeasurement: String?
     ): HistorySeries {
+        val full = buildFull(rows, domain, unitOfMeasurement)
+        val downsampled = when (full.kind) {
+            is SeriesKind.Categorical ->
+                Downsampler.downsampleCategorical(full.points, TARGET_POINTS)
+            else ->
+                Downsampler.downsample(full.points, TARGET_POINTS)
+        }
+        return full.copy(points = downsampled)
+    }
+
+    /** Full-resolution series for CSV export — no downsampling. */
+    fun buildFull(
+        rows: List<HaHistoryRow>,
+        domain: String,
+        unitOfMeasurement: String?
+    ): HistorySeries {
         val initialKind = SeriesClassifier.classify(domain, unitOfMeasurement)
-        val points = rows
+        val points = parsePoints(rows, initialKind)
+        val kind = finalizeKind(initialKind, points, domain)
+        val projectedPoints = projectPoints(points, initialKind, kind)
+        return HistorySeries(points = projectedPoints, kind = kind)
+    }
+
+    private fun parsePoints(
+        rows: List<HaHistoryRow>,
+        initialKind: SeriesKind
+    ): List<HistoryPoint> =
+        rows
             .mapNotNull { row ->
                 val lastChanged = row.lastChanged ?: return@mapNotNull null
                 val ts = runCatching { Instant.parse(lastChanged) }.getOrNull()
@@ -40,26 +66,20 @@ object HistorySeriesBuilder {
             }
             .sortedBy { it.timestamp }
 
-        val kind = finalizeKind(initialKind, points, domain)
-        val projectedPoints = when (kind) {
-            is SeriesKind.Binary if initialKind !is SeriesKind.Binary ->
-                points.map { p ->
-                    p.copy(value = SeriesClassifier.project(SeriesKind.Binary, p.rawState))
-                }
-            is SeriesKind.Numeric if initialKind !is SeriesKind.Numeric ->
-                points.map { p ->
-                    p.copy(value = SeriesClassifier.project(kind, p.rawState))
-                }
-            else -> points
-        }
-
-        val downsampled = when (kind) {
-            is SeriesKind.Categorical ->
-                Downsampler.downsampleCategorical(projectedPoints, TARGET_POINTS)
-            else ->
-                Downsampler.downsample(projectedPoints, TARGET_POINTS)
-        }
-        return HistorySeries(points = downsampled, kind = kind)
+    private fun projectPoints(
+        points: List<HistoryPoint>,
+        initialKind: SeriesKind,
+        kind: SeriesKind
+    ): List<HistoryPoint> = when {
+        kind is SeriesKind.Binary && initialKind !is SeriesKind.Binary ->
+            points.map { p ->
+                p.copy(value = SeriesClassifier.project(SeriesKind.Binary, p.rawState))
+            }
+        kind is SeriesKind.Numeric && initialKind !is SeriesKind.Numeric ->
+            points.map { p ->
+                p.copy(value = SeriesClassifier.project(kind, p.rawState))
+            }
+        else -> points
     }
 
     private fun finalizeKind(

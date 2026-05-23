@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timeline
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,6 +54,7 @@ import se.inix.homeassistantviewer.ui.dashboard.components.SettingsHealthBadge
 fun DashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToEntityPicker: () -> Unit,
+    onNavigateToComparison: () -> Unit,
     onNavigateToEntityDetail: (connectionId: String, entityId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -59,6 +63,7 @@ fun DashboardScreen(
     val dashboardColumns by viewModel.dashboardColumns.collectAsStateWithLifecycle()
     val statusBar by viewModel.statusBar.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val comparisonSelection by viewModel.comparisonSelection.collectAsStateWithLifecycle()
 
     var pendingRemoval by remember { mutableStateOf<DashboardItem?>(null) }
     var pendingRename by remember { mutableStateOf<DashboardItem?>(null) }
@@ -82,6 +87,25 @@ fun DashboardScreen(
                 },
                 actions = {
                     if (uiState !is DashboardUiState.NoConnections) {
+                        IconButton(onClick = onNavigateToComparison) {
+                            if (comparisonSelection.isNotEmpty()) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge { Text(comparisonSelection.size.toString()) }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Timeline,
+                                        contentDescription = "Compare selected"
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    Icons.Rounded.Timeline,
+                                    contentDescription = "Compare"
+                                )
+                            }
+                        }
                         IconButton(onClick = onNavigateToEntityPicker) {
                             Icon(Icons.Rounded.Star, contentDescription = "Manage favorites")
                         }
@@ -129,11 +153,13 @@ fun DashboardScreen(
                         is DashboardUiState.Success -> DashboardGrid(
                             items = state.items,
                             columns = dashboardColumns,
+                            comparisonSelection = comparisonSelection,
                             onAction = viewModel::performAction,
                             onSaveOrder = viewModel::saveItemOrder,
                             onRequestRemove = { pendingRemoval = it },
                             onRequestRename = { pendingRename = it },
-                            onOpenDetail = onNavigateToEntityDetail
+                            onOpenDetail = onNavigateToEntityDetail,
+                            onToggleComparison = viewModel::toggleComparisonSelection
                         )
                     }
                 }

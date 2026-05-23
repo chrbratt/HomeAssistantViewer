@@ -1,21 +1,34 @@
 package se.inix.homeassistantviewer.ui.detail
 
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.model.HaHistoryRow
 import se.inix.homeassistantviewer.data.ws.ConnectionPool
+import se.inix.homeassistantviewer.domain.history.HistoryCsvEncoder
+import se.inix.homeassistantviewer.domain.history.HistoryEntityExport
+import se.inix.homeassistantviewer.domain.history.HistoryExportFeedback
+import se.inix.homeassistantviewer.domain.history.HistoryExportMetadata
 import se.inix.homeassistantviewer.domain.history.HistoryPoint
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
@@ -23,9 +36,10 @@ import se.inix.homeassistantviewer.domain.history.HistorySeriesBuilder
 import se.inix.homeassistantviewer.domain.history.SeriesClassifier
 import se.inix.homeassistantviewer.domain.history.SeriesKind
 import se.inix.homeassistantviewer.domain.history.isPlottableHistoryState
+import se.inix.homeassistantviewer.domain.history.suggestHistoryExportFileName
 import se.inix.homeassistantviewer.ui.dashboard.EntityAction
 import se.inix.homeassistantviewer.ui.dashboard.EntityActionDispatcher
-import se.inix.homeassistantviewer.ui.dashboard.EntityKey
+import java.io.IOException
 import java.time.Instant
 
 /**
@@ -48,6 +62,7 @@ internal class EntityDetailViewModel(
     private val now: () -> Instant = Instant::now,
     customNameSource: Flow<String?> = flowOf(null),
     private val saveCustomName: (String?) -> Unit = {},
+    connections: StateFlow<List<HaConnection>> = MutableStateFlow(emptyList()),
     // Nullable so unit tests can instantiate the VM without wiring up a
     // real ConnectionPool. When null, [performAction] is a no-op — which
     // is fine for the read-only history path the existing tests cover.
@@ -84,6 +99,11 @@ internal class EntityDetailViewModel(
     val customName: StateFlow<String?> = customNameSource
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    private val connectionsState = connections
+
+    private val _exportFeedbackEvents = MutableSharedFlow<HistoryExportFeedback>(extraBufferCapacity = 8)
+    val exportFeedbackEvents: SharedFlow<HistoryExportFeedback> = _exportFeedbackEvents.asSharedFlow()
+
     /**
      * Persist a new display name (or clear it if [name] is null/blank).
      * Whitespace-only is treated as "clear".
@@ -97,6 +117,13 @@ internal class EntityDetailViewModel(
      * network round-trips within a single screen visit.
      */
     private val seriesCache = mutableMapOf<HistoryRange, HistorySeries>()
+
+    private data class RangeExportCache(
+        val metadata: HistoryExportMetadata,
+        val entity: HistoryEntityExport
+    )
+
+    private val exportCache = mutableMapOf<HistoryRange, RangeExportCache>()
 
     @Volatile private var latestCurrentState: HaEntityState? = null
 
@@ -150,7 +177,101 @@ internal class EntityDetailViewModel(
     /** Forces a refetch of the currently selected range, bypassing the cache. */
     fun refresh() {
         seriesCache.remove(_selectedRange.value)
+        exportCache.remove(_selectedRange.value)
         fetchForRange(_selectedRange.value)
+    }
+
+    fun canExportCurrentRange(): Boolean = when (_uiState.value) {
+        is EntityDetailUiState.Loaded, is EntityDetailUiState.Empty -> true
+        else -> false
+    }
+
+    fun suggestExportFileName(): String? {
+        if (!canExportCurrentRange()) return null
+        return suggestHistoryExportFileName(
+            prefix = entityId,
+            range = _selectedRange.value
+        )
+    }
+
+    fun exportToUri(contentResolver: ContentResolver, uri: Uri) {
+        if (!canExportCurrentRange()) return
+        viewModelScope.launch {
+            val range = _selectedRange.value
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val cache = buildExportCache(range)
+                    exportCache[range] = cache
+                    val bytes = HistoryCsvEncoder.encode(cache.metadata, listOf(cache.entity))
+                    contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(bytes)
+                    } ?: throw IOException("Could not open file for writing")
+                    cache
+                }
+            }
+            result.fold(
+                onSuccess = { cache ->
+                    val rows = HistoryCsvEncoder.rowCount(cache.metadata, listOf(cache.entity))
+                    postExportFeedback(
+                        HistoryExportFeedback.Success(
+                            "Exported ${cache.metadata.range.label} ($rows rows)."
+                        )
+                    )
+                },
+                onFailure = {
+                    postExportFeedback(
+                        HistoryExportFeedback.Error(
+                            it.message?.takeIf { msg -> msg.isNotBlank() } ?: "Export failed"
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    private fun postExportFeedback(feedback: HistoryExportFeedback) {
+        viewModelScope.launch { _exportFeedbackEvents.emit(feedback) }
+    }
+
+    private fun resolveConnectionName(connectionId: String): String =
+        connectionsState.value.firstOrNull { it.id == connectionId }?.name ?: connectionId
+
+    private fun resolveDisplayName(current: HaEntityState?): String =
+        customName.value?.takeIf { it.isNotBlank() }
+            ?: current?.friendlyName?.takeIf { it.isNotBlank() }
+            ?: entityId
+
+    private suspend fun buildExportCache(
+        range: HistoryRange,
+        start: Instant = now().minus(range.duration),
+        end: Instant = now(),
+        rows: List<HaHistoryRow>? = null,
+        domain: String? = null,
+        unit: String? = null,
+        current: HaEntityState? = null
+    ): RangeExportCache {
+        val historyRows = rows ?: dataSource.getHistory(entityId, start, end)
+        val entityState = current ?: dataSource.getCurrentState(entityId)
+        val resolvedDomain = domain
+            ?: entityState?.entityId?.substringBefore(".")
+            ?: entityId.substringBefore(".")
+        val resolvedUnit = unit ?: entityState?.unitOfMeasurement
+        val fullSeries = HistorySeriesBuilder.buildFull(historyRows, resolvedDomain, resolvedUnit)
+        return RangeExportCache(
+            metadata = HistoryExportMetadata(
+                exportedAt = end,
+                range = range,
+                rangeStart = start,
+                rangeEnd = end
+            ),
+            entity = HistoryEntityExport(
+                connectionId = connectionId,
+                connectionName = resolveConnectionName(connectionId),
+                entityId = entityId,
+                displayName = resolveDisplayName(entityState),
+                series = fullSeries
+            )
+        )
     }
 
     /**
@@ -204,11 +325,22 @@ internal class EntityDetailViewModel(
                     latestCurrentState = current ?: latestCurrentState
                     val domain = current?.entityId?.substringBefore(".") ?: entityId.substringBefore(".")
                     val unit = current?.unitOfMeasurement
-                    HistorySeriesBuilder.build(rows, domain, unit)
+                    val series = HistorySeriesBuilder.build(rows, domain, unit)
+                    val exportEntry = buildExportCache(
+                        range = range,
+                        start = start,
+                        end = end,
+                        rows = rows,
+                        domain = domain,
+                        unit = unit,
+                        current = current
+                    )
+                    series to exportEntry
                 }
             }
-            result.onSuccess { series ->
+            result.onSuccess { (series, exportCacheEntry) ->
                 seriesCache[range] = series
+                exportCache[range] = exportCacheEntry
                 // "Empty" means no plottable data — either zero rows or every
                 // row was unparseable (e.g. all "unavailable").
                 _uiState.value = if (!series.hasPlottableData())
