@@ -1,6 +1,8 @@
 package se.inix.homeassistantviewer.ui.dashboard.cards
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -11,6 +13,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 
 /**
@@ -22,10 +27,8 @@ import androidx.compose.ui.unit.dp
  *
  * The card body — sliders, switches, controls — lives in [content].
  *
- * A tap-handling overload exists ([onClick] != null) for cards whose surface
- * is its own primary action (Lock, Control). For cards where the body has
- * multiple actions (Cover with up/stop/down) pass null and let inner controls
- * dispatch their own events.
+ * When [onClick] is set, only the body is clickable so the header stays free
+ * for comparison selection (checkbox + long-press on the title row).
  */
 @Composable
 internal fun DashboardCardShell(
@@ -48,28 +51,27 @@ internal fun DashboardCardShell(
             )
         }
 
-    val leading: (@Composable () -> Unit)? = comparisonSelection
-        ?.takeIf { it.isSelected }
-        ?.let { selection ->
-            {
-                ComparisonSelectionCheckbox(
-                    visible = true,
-                    checked = true,
-                    onToggle = selection.onToggle,
-                    tint = colors.onContainer
-                )
-            }
+    val leading: (@Composable () -> Unit)? = comparisonSelection?.let { selection ->
+        {
+            ComparisonSelectionCheckbox(
+                checked = selection.isSelected,
+                onToggle = selection.onToggle,
+                tint = colors.onContainer
+            )
         }
-
-    val body: @Composable ColumnScope.() -> Unit = {
-        CardHeader(
-            title = title,
-            color = colors.onContainer,
-            leading = leading,
-            trailing = trailing
-        )
-        content()
     }
+
+    val haptic = LocalHapticFeedback.current
+    val headerModifier = comparisonSelection?.let { selection ->
+        Modifier.pointerInput(selection.isSelected) {
+            detectTapGestures(
+                onLongPress = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    selection.onToggle()
+                }
+            )
+        }
+    } ?: Modifier
 
     val containerColors = CardDefaults.cardColors(containerColor = colors.container)
     val showSelectionOutline = comparisonSelection?.isSelected == true
@@ -87,30 +89,33 @@ internal fun DashboardCardShell(
             }
         )
 
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            modifier = cardModifier,
-            shape = MaterialTheme.shapes.large,
-            colors = containerColors
+    Card(
+        modifier = cardModifier,
+        shape = MaterialTheme.shapes.large,
+        colors = containerColors
+    ) {
+        Column(
+            modifier = Modifier.padding(CardStyle.Padding),
+            verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing)
         ) {
-            Column(
-                modifier = Modifier.padding(CardStyle.Padding),
-                verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
-                content = body
+            CardHeader(
+                title = title,
+                color = colors.onContainer,
+                leading = leading,
+                trailing = trailing,
+                modifier = headerModifier.fillMaxWidth()
             )
-        }
-    } else {
-        Card(
-            modifier = cardModifier,
-            shape = MaterialTheme.shapes.large,
-            colors = containerColors
-        ) {
-            Column(
-                modifier = Modifier.padding(CardStyle.Padding),
-                verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
-                content = body
-            )
+            if (onClick != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onClick),
+                    verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
+                    content = content
+                )
+            } else {
+                content()
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ import se.inix.homeassistantviewer.ui.dashboard.cards.CardStyle
 
 /**
  * Visible drag handle for reordering dashboard items. Long-press here to drag;
- * the card body is free for comparison selection via long-press.
+ * comparison selection uses the card header checkbox or a long-press on the title.
  */
 @Composable
 fun DragHandleIcon(
