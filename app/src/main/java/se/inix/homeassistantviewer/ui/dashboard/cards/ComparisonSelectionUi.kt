@@ -1,8 +1,8 @@
 package se.inix.homeassistantviewer.ui.dashboard.cards
 
 /**
- * When non-null, the card supports comparison selection via the header
- * checkbox or long-press on the title row.
+ * When non-null, the card is in comparison selection mode: the checkbox is
+ * visible and the title row accepts long-press to toggle selection.
  */
 data class ComparisonSelectionUi(
     val isSelected: Boolean,

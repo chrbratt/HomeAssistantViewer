@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -87,6 +88,11 @@ fun DashboardScreen(
                 },
                 actions = {
                     if (uiState !is DashboardUiState.NoConnections) {
+                        if (comparisonSelection.isNotEmpty()) {
+                            TextButton(onClick = { viewModel.clearComparisonSelection() }) {
+                                Text("Clear")
+                            }
+                        }
                         IconButton(onClick = onNavigateToComparison) {
                             if (comparisonSelection.isNotEmpty()) {
                                 BadgedBox(

@@ -146,7 +146,7 @@ private fun ComparisonEmptyState(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Tap the circle on a favorite card, or long-press its title, to select entities for comparison.",
+            text = "Long-press a favorite to start selecting entities for comparison.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

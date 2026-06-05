@@ -2,6 +2,7 @@ package se.inix.homeassistantviewer.ui.dashboard.components
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import se.inix.homeassistantviewer.data.model.ComparisonEntity
@@ -66,6 +68,7 @@ fun DashboardGrid(
 
     val haptic = LocalHapticFeedback.current
     val spacing = LocalCardSpacing.current
+    val comparisonModeActive = comparisonSelection.isNotEmpty()
 
     LazyVerticalStaggeredGrid(
         state = lazyGridState,
@@ -119,14 +122,31 @@ fun DashboardGrid(
                     is DashboardItem.Entity -> {
                         val comparable = item.isComparableDomain()
                         val isSelected = ComparisonEntity(item.connectionId, item.entityId) in comparisonSelection
-                        Box(modifier = itemModifier.fillMaxWidth()) {
+                        Box(
+                            modifier = itemModifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (comparable) {
+                                        Modifier.pointerInput(item.key, comparisonModeActive) {
+                                            detectTapGestures(
+                                                onLongPress = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    onToggleComparison(item.connectionId, item.entityId)
+                                                }
+                                            )
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
                             EntityCard(
                                 item = item,
                                 onAction = onAction,
                                 onRequestRemove = { onRequestRemove(item) },
                                 onRequestRename = { onRequestRename(item) },
                                 onOpenDetail = onOpenDetail,
-                                comparisonSelection = if (comparable) {
+                                comparisonSelection = if (comparable && comparisonModeActive) {
                                     ComparisonSelectionUi(
                                         isSelected = isSelected,
                                         onToggle = {

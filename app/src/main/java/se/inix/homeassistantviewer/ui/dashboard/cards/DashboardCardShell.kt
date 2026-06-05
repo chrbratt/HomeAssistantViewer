@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
  * The card body — sliders, switches, controls — lives in [content].
  *
  * When [onClick] is set, only the body is clickable so the header stays free
- * for comparison selection (checkbox + long-press on the title row).
+ * for comparison selection while selection mode is active.
  */
 @Composable
 internal fun DashboardCardShell(
@@ -53,7 +53,8 @@ internal fun DashboardCardShell(
 
     val leading: (@Composable () -> Unit)? = comparisonSelection?.let { selection ->
         {
-            ComparisonSelectionCheckbox(
+            AnimatedComparisonSelectionCheckbox(
+                visible = true,
                 checked = selection.isSelected,
                 onToggle = selection.onToggle,
                 tint = colors.onContainer

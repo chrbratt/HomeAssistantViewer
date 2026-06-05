@@ -23,8 +23,15 @@ internal class ComparisonSelectionStore(
     private val _selection = MutableStateFlow<Set<ComparisonEntity>>(emptySet())
     val selection: StateFlow<Set<ComparisonEntity>> = _selection.asStateFlow()
 
+    /** Ignores stale DataStore replays while a newer write is still flushing. */
+    private var pendingPersistedRaw: String? = null
+
     internal fun onDataStorePayload(raw: String?) {
-        _selection.value = ComparisonSelectionCodec.deserialize(raw ?: "")
+        val payload = raw ?: ""
+        if (pendingPersistedRaw != null) return
+        val incoming = ComparisonSelectionCodec.deserialize(payload)
+        if (incoming == _selection.value) return
+        _selection.value = incoming
     }
 
     fun toggle(connectionId: String, entityId: String) {
@@ -51,9 +58,12 @@ internal class ComparisonSelectionStore(
     }
 
     private fun update(selection: Set<ComparisonEntity>) {
+        val serialized = ComparisonSelectionCodec.serialize(selection)
         _selection.value = selection
+        pendingPersistedRaw = serialized
         scope.launch {
-            dataStore.edit { it[KEY] = ComparisonSelectionCodec.serialize(selection) }
+            dataStore.edit { it[KEY] = serialized }
+            pendingPersistedRaw = null
         }
     }
 
