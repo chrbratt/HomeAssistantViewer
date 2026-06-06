@@ -49,7 +49,6 @@ import se.inix.homeassistantviewer.domain.history.isPlottableHistoryState
 import se.inix.homeassistantviewer.ui.common.formatSensorValue
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 /**
  * Home Assistant–style state timeline for entities with named text states
@@ -268,10 +267,7 @@ private fun DrawScope.drawCategoricalStateTimeline(
         }
     }
 
-    val tickCount = 5
-    val ticks = List(tickCount) { i ->
-        viewport.startEpoch + ((i.toDouble() / (tickCount - 1)) * span).roundToInt()
-    }
+    val ticks = niceTimeTicks(viewport)
     for (t in ticks) {
         val x = xToPixel(t)
         drawLine(

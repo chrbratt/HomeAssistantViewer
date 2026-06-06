@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "se.inix.homeassistantviewer"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "se.inix.homeassistantviewer"

@@ -51,10 +51,10 @@ import se.inix.homeassistantviewer.ui.detail.components.TimelineWindow
 import se.inix.homeassistantviewer.ui.detail.components.applyGesture
 import se.inix.homeassistantviewer.ui.detail.components.computeOnIntervals
 import se.inix.homeassistantviewer.ui.detail.components.computeWindow
+import se.inix.homeassistantviewer.ui.detail.components.niceTimeTicks
 import se.inix.homeassistantviewer.ui.detail.components.timeFormatterFor
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 private val SwimlaneLabelWidth = 120.dp
 private val SwimlaneTrackHeight = 48.dp
@@ -377,11 +377,7 @@ private fun DrawScope.drawSharedVerticalGuides(
     }
 
     val totalHeight = laneCount * laneHeightPx + (laneCount - 1).coerceAtLeast(0) * laneSpacingPx
-    val tickCount = 5
-    val ticks = List(tickCount) { i ->
-        viewport.startEpoch + ((i.toDouble() / (tickCount - 1)) * span).roundToInt()
-    }
-    for (t in ticks) {
+    for (t in niceTimeTicks(viewport)) {
         val x = xToPixel(t)
         drawLine(
             color = guidelineColor,
@@ -404,11 +400,7 @@ private fun DrawScope.drawSharedTimeAxis(
         return frac * size.width
     }
 
-    val tickCount = 5
-    val ticks = List(tickCount) { i ->
-        viewport.startEpoch + ((i.toDouble() / (tickCount - 1)) * span).roundToInt()
-    }
-    for (t in ticks) {
+    for (t in niceTimeTicks(viewport)) {
         val text = timeFormatter.format(Instant.ofEpochSecond(t))
         val layout = textMeasurer.measure(text, labelStyle)
         val centerX = xToPixel(t)

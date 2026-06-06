@@ -12,14 +12,18 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelCompone
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.DefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.marker.LineCartesianLayerMarkerTarget
+import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.domain.history.SeriesKind
@@ -74,6 +78,12 @@ private fun NumericHistoryChart(
     val bottomFormatter = remember(range, frame.xOffsetSeconds) {
         rangeTimeFormatter(range, frame.xOffsetSeconds)
     }
+    val unit = (series.kind as? SeriesKind.Numeric)?.unit
+    val marker = rememberValueMarker(
+        unit = unit,
+        offsetSeconds = frame.xOffsetSeconds,
+        range = range
+    )
 
     val scrollState = rememberVicoScrollState()
     val zoomState = rememberVicoZoomState(
@@ -88,7 +98,7 @@ private fun NumericHistoryChart(
         scrollState = scrollState,
         zoomState = zoomState
     ) {
-        lineSeries { series(frame.xs, frame.ys) }
+        lineModel { series(frame.xs, frame.ys) }
     }
 
     CartesianChartHost(
@@ -113,12 +123,53 @@ private fun NumericHistoryChart(
                 valueFormatter = bottomFormatter,
                 guideline = components.guideline,
                 line = components.axisLine
-            )
+            ),
+            marker = marker
         ),
         modelProducer = modelProducer,
         modifier = modifier,
         scrollState = scrollState,
         zoomState = zoomState
+    )
+}
+
+/**
+ * Touch marker that shows the exact value (with unit) and wall-clock time of
+ * the nearest point — the single biggest readability win for "what was the
+ * temperature at 14:30?" style questions.
+ */
+@Composable
+private fun rememberValueMarker(
+    unit: String?,
+    offsetSeconds: Long,
+    range: HistoryRange
+): DefaultCartesianMarker {
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(
+        color = MaterialTheme.colorScheme.onSurface
+    )
+    val pattern = when (range) {
+        HistoryRange.Hour -> "HH:mm:ss"
+        HistoryRange.Day -> "HH:mm"
+        HistoryRange.Week -> "EEE HH:mm"
+        HistoryRange.Month -> "d MMM HH:mm"
+    }
+    val timeFormatter = remember(range) {
+        DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
+    }
+    return rememberDefaultCartesianMarker(
+        label = rememberTextComponent(style = labelStyle),
+        valueFormatter = remember(unit, offsetSeconds, timeFormatter) {
+            DefaultCartesianMarker.ValueFormatter { _, targets ->
+                val lineTargets = targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
+                val first = lineTargets.firstOrNull() ?: return@ValueFormatter ""
+                val time = timeFormatter.format(
+                    Instant.ofEpochSecond(offsetSeconds + first.x.toLong())
+                )
+                val value = first.points.firstOrNull()?.entry?.y
+                val unitSuffix = unit?.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
+                if (value == null) time else "$time\n$value$unitSuffix"
+            }
+        }
     )
 }
 

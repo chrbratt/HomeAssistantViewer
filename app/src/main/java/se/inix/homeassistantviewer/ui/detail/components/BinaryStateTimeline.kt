@@ -31,7 +31,6 @@ import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 /**
  * Home Assistant–style state timeline for binary entities (switch, light,
@@ -190,10 +189,7 @@ private fun DrawScope.drawBinaryStateTimeline(
         }
     }
 
-    val tickCount = 5
-    val ticks = List(tickCount) { i ->
-        viewport.startEpoch + ((i.toDouble() / (tickCount - 1)) * span).roundToInt()
-    }
+    val ticks = niceTimeTicks(viewport)
     for (t in ticks) {
         val x = xToPixel(t)
         drawLine(

@@ -85,8 +85,20 @@ internal fun rememberAdaptiveStartAxis(
         guideline = guideline,
         line = axisLine,
         valueFormatter = valueFormatter,
-        itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { null }) }
+        // Fixed "nice" Y step (1/2/5 ×10ⁿ) derived from the currently visible
+        // range, so labels land on round values and keep a stable spacing
+        // while zooming instead of arbitrary auto-placed numbers.
+        itemPlacer = remember {
+            VerticalAxis.ItemPlacer.step(step = { store ->
+                store.getOrNull(AdaptiveYRangeKey)?.let { range ->
+                    niceStep((range.maxY - range.minY) / AdaptiveYTargetTicks)
+                        .takeIf { it > 0.0 }
+                }
+            })
+        }
     )
+
+private const val AdaptiveYTargetTicks = 5.0
 
 @Composable
 internal fun SyncAdaptiveYRange(

@@ -54,7 +54,7 @@ internal fun DashboardCardShell(
     val leading: (@Composable () -> Unit)? = comparisonSelection?.let { selection ->
         {
             AnimatedComparisonSelectionCheckbox(
-                visible = true,
+                visible = selection.selectionModeActive,
                 checked = selection.isSelected,
                 onToggle = selection.onToggle,
                 tint = colors.onContainer
