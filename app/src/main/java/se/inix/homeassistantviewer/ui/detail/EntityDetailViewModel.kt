@@ -250,7 +250,7 @@ internal class EntityDetailViewModel(
         unit: String? = null,
         current: HaEntityState? = null
     ): RangeExportCache {
-        val historyRows = rows ?: dataSource.getHistory(entityId, start, end)
+        val historyRows = rows ?: dataSource.getHistory(entityId, start, end, range.statisticsPeriod)
         val entityState = current ?: dataSource.getCurrentState(entityId)
         val resolvedDomain = domain
             ?: entityState?.entityId?.substringBefore(".")
@@ -318,7 +318,9 @@ internal class EntityDetailViewModel(
                 // soon as both finish; either alone is already much slower than
                 // the await of the other on typical home networks.
                 coroutineScope {
-                    val historyDeferred = async { dataSource.getHistory(entityId, start, end) }
+                    val historyDeferred = async {
+                        dataSource.getHistory(entityId, start, end, range.statisticsPeriod)
+                    }
                     val currentDeferred = async { dataSource.getCurrentState(entityId) }
                     val rows = historyDeferred.await()
                     val current = currentDeferred.await()

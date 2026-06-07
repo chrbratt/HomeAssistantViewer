@@ -1,9 +1,11 @@
 package se.inix.homeassistantviewer.ui.detail
 
 import kotlinx.coroutines.flow.Flow
+import se.inix.homeassistantviewer.data.ha.fetchHistoryRows
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.model.HaHistoryRow
 import se.inix.homeassistantviewer.data.ws.ConnectionPool
+import se.inix.homeassistantviewer.domain.history.StatisticsPeriod
 import java.time.Instant
 
 /**
@@ -19,7 +21,12 @@ import java.time.Instant
  * we don't have a mocking library set up in the project.
  */
 internal interface EntityHistoryDataSource {
-    suspend fun getHistory(entityId: String, start: Instant, end: Instant): List<HaHistoryRow>
+    suspend fun getHistory(
+        entityId: String,
+        start: Instant,
+        end: Instant,
+        statisticsPeriod: StatisticsPeriod? = null
+    ): List<HaHistoryRow>
     suspend fun getCurrentState(entityId: String): HaEntityState?
     /**
      * Hot flow of live state-changed events for the connection this data
@@ -44,8 +51,10 @@ internal class ConnectionPoolDataSource(
     override suspend fun getHistory(
         entityId: String,
         start: Instant,
-        end: Instant
-    ): List<HaHistoryRow> = repository?.getHistory(entityId, start, end).orEmpty()
+        end: Instant,
+        statisticsPeriod: StatisticsPeriod?
+    ): List<HaHistoryRow> =
+        fetchHistoryRows(pool, connectionId, entityId, start, end, statisticsPeriod)
 
     override suspend fun getCurrentState(entityId: String): HaEntityState? =
         repository?.let {

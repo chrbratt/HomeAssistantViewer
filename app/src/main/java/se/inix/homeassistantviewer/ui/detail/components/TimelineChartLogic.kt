@@ -13,15 +13,22 @@ internal data class TimelineWindow(val startEpoch: Long, val endEpoch: Long) {
 }
 
 /**
- * Picks the chart window. We pin the left edge at the first known data
- * point and the right edge at max(last data, now).
+ * Picks the chart window. The right edge is max(last data, now). The left
+ * edge is [requestedStartEpoch] when provided (the user-selected range), so
+ * a 6-month chip shows a 6-month-wide axis even when HA only stored 30 days
+ * of data — making recorder retention visible instead of looking like a bug.
  */
-internal fun computeWindow(points: List<HistoryPoint>, nowEpoch: Long): TimelineWindow? {
+internal fun computeWindow(
+    points: List<HistoryPoint>,
+    nowEpoch: Long,
+    requestedStartEpoch: Long? = null
+): TimelineWindow? {
     val first = points.firstOrNull()?.timestamp?.epochSecond ?: return null
     val lastPointEpoch = points.last().timestamp.epochSecond
     val end = max(lastPointEpoch, nowEpoch)
-    if (end <= first) return null
-    return TimelineWindow(startEpoch = first, endEpoch = end)
+    val start = requestedStartEpoch ?: first
+    if (end <= start) return null
+    return TimelineWindow(startEpoch = start, endEpoch = end)
 }
 
 internal fun applyGesture(
@@ -68,7 +75,8 @@ private val NiceTimeStepsSeconds = longArrayOf(
     1, 2, 5, 10, 15, 30,
     60, 2 * 60, 5 * 60, 10 * 60, 15 * 60, 30 * 60,
     3600, 2 * 3600, 3 * 3600, 6 * 3600, 12 * 3600,
-    86_400, 2 * 86_400, 7 * 86_400, 14 * 86_400, 30 * 86_400
+    86_400, 2 * 86_400, 7 * 86_400, 14 * 86_400, 30 * 86_400,
+    60 * 86_400, 90 * 86_400, 180 * 86_400, 365 * 86_400
 )
 
 /** Smallest "nice" step (seconds) that splits [spanSeconds] into ~[targetTicks] intervals. */
@@ -115,7 +123,8 @@ internal fun timeFormatterFor(spanSeconds: Long): DateTimeFormatter {
         spanSeconds <= 2L * 3_600L -> "HH:mm:ss"
         spanSeconds <= 2L * 86_400L -> "HH:mm"
         spanSeconds <= 7L * 86_400L -> "EEE HH:mm"
-        else -> "d MMM"
+        spanSeconds <= 90L * 86_400L -> "d MMM"
+        else -> "MMM yy"
     }
     return DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
 }

@@ -13,8 +13,14 @@ import java.time.Instant
  */
 object HistorySeriesBuilder {
 
-    /** Max points to feed into the chart. Keeps Vico responsive on pan/zoom. */
-    private const val TARGET_POINTS = 400
+    /**
+     * Upper bound on points fed to the chart. Sized so full-resolution
+     * statistics survive without downsampling — the densest case is a
+     * 6-month window of hourly long-term statistics (~4 320 points) — while
+     * still capping pathological raw-state series so Vico stays responsive
+     * on pan/zoom.
+     */
+    private const val TARGET_POINTS = 5000
 
     /** Domains that always use the categorical timeline, never binary upgrade. */
     private val forceCategoricalDomains = setOf("input_select", "select")

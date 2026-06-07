@@ -77,6 +77,7 @@ class HistoryCsvEncoderTest {
     }
 
     @Test
+    fun `escape quotes commas and plain values per CSV rules`() {
         assertEquals("plain", HistoryCsvEncoder.escape("plain"))
         assertEquals("\"say \"\"hi\"\"\"", HistoryCsvEncoder.escape("say \"hi\""))
         assertEquals("\"a,b\"", HistoryCsvEncoder.escape("a,b"))

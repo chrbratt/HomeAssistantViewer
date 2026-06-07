@@ -1,8 +1,10 @@
 package se.inix.homeassistantviewer.ui.comparison
 
+import se.inix.homeassistantviewer.data.ha.fetchHistoryRows
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.model.HaHistoryRow
 import se.inix.homeassistantviewer.data.ws.ConnectionPool
+import se.inix.homeassistantviewer.domain.history.StatisticsPeriod
 import java.time.Instant
 
 /**
@@ -14,7 +16,8 @@ interface ComparisonHistoryDataSource {
         connectionId: String,
         entityId: String,
         start: Instant,
-        end: Instant
+        end: Instant,
+        statisticsPeriod: StatisticsPeriod? = null
     ): List<HaHistoryRow>
 
     suspend fun getCurrentState(connectionId: String, entityId: String): HaEntityState?
@@ -28,9 +31,10 @@ internal class PoolComparisonHistoryDataSource(
         connectionId: String,
         entityId: String,
         start: Instant,
-        end: Instant
+        end: Instant,
+        statisticsPeriod: StatisticsPeriod?
     ): List<HaHistoryRow> =
-        pool.repositoryFor(connectionId)?.getHistory(entityId, start, end).orEmpty()
+        fetchHistoryRows(pool, connectionId, entityId, start, end, statisticsPeriod)
 
     override suspend fun getCurrentState(connectionId: String, entityId: String): HaEntityState? =
         pool.repositoryFor(connectionId)?.let { repo ->

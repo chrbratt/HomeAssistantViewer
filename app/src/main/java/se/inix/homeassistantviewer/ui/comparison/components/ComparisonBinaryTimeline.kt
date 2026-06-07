@@ -131,7 +131,9 @@ private fun ComparisonBinarySwimlanes(
     }
 
     val allPoints = remember(series) { series.flatMap { it.series.points } }
-    val window = remember(allPoints, nowEpoch) { computeWindow(allPoints, nowEpoch) } ?: return
+    val window = remember(allPoints, range, nowEpoch) {
+        computeWindow(allPoints, nowEpoch, range.startEpoch(nowEpoch))
+    } ?: return
     val laneData = remember(series, window, nowEpoch) {
         series.map { entry ->
             BinarySwimlaneData(

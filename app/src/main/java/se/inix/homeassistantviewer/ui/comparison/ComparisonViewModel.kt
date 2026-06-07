@@ -21,8 +21,8 @@ import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.model.HaHistoryRow
-import se.inix.homeassistantviewer.domain.comparison.ComparisonChartGrouper
 import se.inix.homeassistantviewer.domain.comparison.ComparisonChartGroup
+import se.inix.homeassistantviewer.domain.comparison.ComparisonChartGrouper
 import se.inix.homeassistantviewer.domain.comparison.ComparisonExcludedEntry
 import se.inix.homeassistantviewer.domain.comparison.ComparisonSeriesEntry
 import se.inix.homeassistantviewer.domain.history.HistoryCsvEncoder
@@ -188,7 +188,8 @@ class ComparisonViewModel(
                                 entity.connectionId,
                                 entity.entityId,
                                 start,
-                                end
+                                end,
+                                range.statisticsPeriod
                             )
                             val current = dataSource.getCurrentState(
                                 entity.connectionId,
@@ -240,7 +241,9 @@ class ComparisonViewModel(
         val results = coroutineScope {
             selection.map { entity ->
                 async {
-                    val rows = dataSource.getHistory(entity.connectionId, entity.entityId, start, end)
+                    val rows = dataSource.getHistory(
+                        entity.connectionId, entity.entityId, start, end, range.statisticsPeriod
+                    )
                     val current = dataSource.getCurrentState(entity.connectionId, entity.entityId)
                     toFetchResult(entity, rows, current, favorites)
                 }

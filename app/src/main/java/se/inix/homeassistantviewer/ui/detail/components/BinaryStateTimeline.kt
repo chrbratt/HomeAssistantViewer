@@ -55,7 +55,9 @@ internal fun BinaryStateTimeline(
         }
     }
 
-    val window = remember(series, nowEpoch) { computeWindow(series.points, nowEpoch) } ?: return
+    val window = remember(series, range, nowEpoch) {
+        computeWindow(series.points, nowEpoch, range.startEpoch(nowEpoch))
+    } ?: return
     val intervals = remember(series, window) {
         computeOnIntervals(series.points, windowEnd = window.endEpoch)
     }

@@ -2,6 +2,8 @@ package se.inix.homeassistantviewer.ui.detail.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -24,6 +26,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import kotlinx.coroutines.delay
 import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.domain.history.SeriesKind
@@ -35,8 +38,8 @@ import java.time.format.DateTimeFormatter
  * Entry point for rendering an entity's [HistorySeries].
  *
  * Numeric and binary series render very differently:
- *  - Numeric (temperature, lux, power, …) → smooth cubic line chart with
- *    free Y range, drawn via Vico's `LineCartesianLayer`.
+ *  - Numeric (temperature, lux, power, …) → smooth Catmull-Rom line chart
+ *    with free Y range, drawn via Vico's `LineCartesianLayer`.
  *  - Binary (switch, light, lock, binary_sensor) → HA-style state timeline
  *    with filled ON blocks, drawn via Compose Canvas. Vico's line layer
  *    can't natively produce flat-top step shapes — see
@@ -59,9 +62,10 @@ internal fun HistoryChart(
 }
 
 /**
- * Smooth cubic line chart for continuous numeric series (temperature,
+ * Smooth Catmull-Rom line chart for continuous numeric series (temperature,
  * humidity, lux, power, etc.). Y axis auto-fits the data, Y labels live
- * inside the chart area so the line gets the full width.
+ * inside the chart area so the line gets the full width. A zero reference
+ * line is drawn when the series crosses below zero.
  */
 @Composable
 private fun NumericHistoryChart(
@@ -69,7 +73,15 @@ private fun NumericHistoryChart(
     range: HistoryRange,
     modifier: Modifier = Modifier
 ) {
-    val frame = remember(series) { buildFrame(series) } ?: return
+    val nowEpoch by produceState(initialValue = Instant.now().epochSecond) {
+        while (true) {
+            delay(30_000L)
+            value = Instant.now().epochSecond
+        }
+    }
+    val frame = remember(series, range, nowEpoch) {
+        buildFrame(series, range.startEpoch(nowEpoch))
+    } ?: return
     val plotPoints = remember(frame) { frame.toPlotPoints() }
 
     val lineColor = MaterialTheme.colorScheme.primary
@@ -84,6 +96,9 @@ private fun NumericHistoryChart(
         offsetSeconds = frame.xOffsetSeconds,
         range = range
     )
+    val includesNegative = remember(frame) { frame.ys.any { it < 0.0 } }
+    val zeroLine = rememberZeroLineDecoration(includesNegative)
+    val decorations = remember(zeroLine) { listOfNotNull(zeroLine) }
 
     val scrollState = rememberVicoScrollState()
     val zoomState = rememberVicoZoomState(
@@ -108,7 +123,7 @@ private fun NumericHistoryChart(
                     LineCartesianLayer.rememberLine(
                         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
                         areaFill = LineCartesianLayer.AreaFill.single(Fill(areaColor)),
-                        interpolator = LineCartesianLayer.Interpolator.cubic()
+                        interpolator = LineCartesianLayer.Interpolator.catmullRom()
                     )
                 ),
                 rangeProvider = remember { AdaptiveVisibleYRangeProvider }
@@ -124,7 +139,8 @@ private fun NumericHistoryChart(
                 guideline = components.guideline,
                 line = components.axisLine
             ),
-            marker = marker
+            marker = marker,
+            decorations = decorations
         ),
         modelProducer = modelProducer,
         modifier = modifier,
@@ -147,12 +163,7 @@ private fun rememberValueMarker(
     val labelStyle = MaterialTheme.typography.labelSmall.copy(
         color = MaterialTheme.colorScheme.onSurface
     )
-    val pattern = when (range) {
-        HistoryRange.Hour -> "HH:mm:ss"
-        HistoryRange.Day -> "HH:mm"
-        HistoryRange.Week -> "EEE HH:mm"
-        HistoryRange.Month -> "d MMM HH:mm"
-    }
+    val pattern = range.axisTimePattern
     val timeFormatter = remember(range) {
         DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     }
@@ -183,13 +194,12 @@ private fun rememberValueMarker(
  * chart **relative seconds** (0 .. range) and reconstruct the absolute
  * timestamp inside the bottom-axis formatter using [ChartFrame.xOffsetSeconds].
  */
-private fun buildFrame(series: HistorySeries): ChartFrame? {
+private fun buildFrame(series: HistorySeries, xOffsetSeconds: Long): ChartFrame? {
     val plottable = series.points.filter { it.value != null }
     if (plottable.size < 2) return null
-    val offset = plottable.first().timestamp.epochSecond
-    val xs = plottable.map { (it.timestamp.epochSecond - offset).toDouble() }
+    val xs = plottable.map { (it.timestamp.epochSecond - xOffsetSeconds).toDouble() }
     val ys = plottable.mapNotNull { it.value }
-    return buildChartFrame(xs, ys, offset)
+    return buildChartFrame(xs, ys, xOffsetSeconds)
 }
 
 /**
@@ -223,8 +233,10 @@ private fun rememberAxisComponents(): AxisComponents {
  * Picks a label format that gives enough resolution at the selected range:
  *  - Hour     -> "HH:mm:ss"
  *  - Day      -> "HH:mm"
- *  - Week     -> "EEE HH:mm" (weekday + time)
- *  - Month    -> "d MMM" (day + month)
+ *  - Week     -> "EEE HH:mm"
+ *  - Month    -> "d MMM"
+ *  - SixMonths -> "d MMM"
+ *  - Year     -> "MMM yy"
  *
  * Built once per range and used for every label call so the chart does not
  * re-allocate `DateTimeFormatter` instances on every frame.
@@ -237,12 +249,7 @@ private fun rangeTimeFormatter(
     range: HistoryRange,
     offsetSeconds: Long
 ): CartesianValueFormatter {
-    val pattern = when (range) {
-        HistoryRange.Hour -> "HH:mm:ss"
-        HistoryRange.Day -> "HH:mm"
-        HistoryRange.Week -> "EEE HH:mm"
-        HistoryRange.Month -> "d MMM"
-    }
+    val pattern = range.axisTimePattern
     val formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     return CartesianValueFormatter { _, value, _ ->
         formatter.format(Instant.ofEpochSecond(offsetSeconds + value.toLong()))

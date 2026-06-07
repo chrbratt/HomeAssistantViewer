@@ -41,7 +41,10 @@ class EntityDetailViewModelTest {
         override val stateChanges: Flow<HaEntityState> get() = live
 
         override suspend fun getHistory(
-            entityId: String, start: Instant, end: Instant
+            entityId: String,
+            start: Instant,
+            end: Instant,
+            statisticsPeriod: se.inix.homeassistantviewer.domain.history.StatisticsPeriod?
         ): List<HaHistoryRow> {
             historyCalls += Triple(entityId, start, end)
             if (throwHistory) error("network down")

@@ -10,11 +10,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -46,6 +49,7 @@ import se.inix.homeassistantviewer.ui.detail.components.SyncAdaptiveYRange
 import se.inix.homeassistantviewer.ui.detail.components.buildChartFrame
 import se.inix.homeassistantviewer.ui.detail.components.mergePlotPoints
 import se.inix.homeassistantviewer.ui.detail.components.rememberAdaptiveStartAxis
+import se.inix.homeassistantviewer.ui.detail.components.rememberZeroLineDecoration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -97,13 +101,21 @@ private fun MultiNumericHistoryChart(
     colors: List<Color>,
     modifier: Modifier = Modifier
 ) {
-    val frames = remember(series) {
-        series.mapNotNull { entry -> buildFrame(entry.series)?.let { entry to it } }
+    val nowEpoch by produceState(initialValue = Instant.now().epochSecond) {
+        while (true) {
+            delay(30_000L)
+            value = Instant.now().epochSecond
+        }
+    }
+    val xOffsetSeconds = range.startEpoch(nowEpoch)
+    val frames = remember(series, xOffsetSeconds) {
+        series.mapNotNull { entry ->
+            buildFrame(entry.series, xOffsetSeconds)?.let { entry to it }
+        }
     }
     if (frames.isEmpty()) return
 
     val plotPoints = remember(frames) { mergePlotPoints(frames.map { it.second }) }
-    val xOffsetSeconds = frames.minOf { it.second.xOffsetSeconds }
     val components = rememberAxisComponents()
     val bottomFormatter = remember(range, xOffsetSeconds) {
         rangeTimeFormatter(range, xOffsetSeconds)
@@ -120,9 +132,15 @@ private fun MultiNumericHistoryChart(
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(color)),
             areaFill = null,
-            interpolator = LineCartesianLayer.Interpolator.cubic()
+            interpolator = LineCartesianLayer.Interpolator.catmullRom()
         )
     }
+
+    val includesNegative = remember(frames) {
+        frames.any { (_, frame) -> frame.ys.any { it < 0.0 } }
+    }
+    val zeroLine = rememberZeroLineDecoration(includesNegative)
+    val decorations = remember(zeroLine) { listOfNotNull(zeroLine) }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
@@ -155,7 +173,8 @@ private fun MultiNumericHistoryChart(
             guideline = components.guideline,
             line = components.axisLine
         ),
-        marker = rememberComparisonMarker(frames, xOffsetSeconds, range)
+        marker = rememberComparisonMarker(frames, xOffsetSeconds, range),
+        decorations = decorations
     )
 
     CartesianChartHost(
@@ -167,13 +186,12 @@ private fun MultiNumericHistoryChart(
     )
 }
 
-private fun buildFrame(series: HistorySeries): ChartFrame? {
+private fun buildFrame(series: HistorySeries, xOffsetSeconds: Long): ChartFrame? {
     val plottable = series.points.filter { it.value != null }
     if (plottable.size < 2) return null
-    val offset = plottable.first().timestamp.epochSecond
-    val xs = plottable.map { (it.timestamp.epochSecond - offset).toDouble() }
+    val xs = plottable.map { (it.timestamp.epochSecond - xOffsetSeconds).toDouble() }
     val ys = plottable.mapNotNull(HistoryPoint::value)
-    return buildChartFrame(xs, ys, offset)
+    return buildChartFrame(xs, ys, xOffsetSeconds)
 }
 
 private data class AxisComponents(
@@ -199,12 +217,7 @@ private fun rangeTimeFormatter(
     range: HistoryRange,
     offsetSeconds: Long
 ): CartesianValueFormatter {
-    val pattern = when (range) {
-        HistoryRange.Hour -> "HH:mm:ss"
-        HistoryRange.Day -> "HH:mm"
-        HistoryRange.Week -> "EEE HH:mm"
-        HistoryRange.Month -> "d MMM"
-    }
+    val pattern = range.axisTimePattern
     val formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     return CartesianValueFormatter { _, value, _ ->
         formatter.format(Instant.ofEpochSecond(offsetSeconds + value.toLong()))
@@ -220,12 +233,7 @@ private fun rememberComparisonMarker(
     val labelStyle = MaterialTheme.typography.labelSmall.copy(
         color = MaterialTheme.colorScheme.onSurface
     )
-    val timePattern = when (range) {
-        HistoryRange.Hour -> "HH:mm:ss"
-        HistoryRange.Day -> "HH:mm"
-        HistoryRange.Week -> "EEE HH:mm"
-        HistoryRange.Month -> "d MMM"
-    }
+    val timePattern = range.markerTimePattern
     val timeFormatter = remember(range) {
         DateTimeFormatter.ofPattern(timePattern).withZone(ZoneId.systemDefault())
     }

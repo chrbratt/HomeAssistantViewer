@@ -4,6 +4,7 @@ import android.util.Log
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,15 +17,22 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import org.json.JSONArray
 import org.json.JSONObject
 import se.inix.homeassistantviewer.BuildConfig
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.model.HaStatisticsPoint
+import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -65,6 +73,9 @@ class HaWebSocketClient(
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    /** Outstanding request/response calls (e.g. statistics), keyed by message id. */
+    private val pendingResults = ConcurrentHashMap<Int, CompletableDeferred<JSONObject?>>()
 
     private val listener = object : WebSocketListener() {
         override fun onMessage(webSocket: WebSocket, text: String) = handleMessage(webSocket, text)
@@ -109,6 +120,7 @@ class HaWebSocketClient(
         webSocket?.close(CLOSE_NORMAL, "disconnect")
         webSocket = null
         _connectionState.value = ConnectionState.Disconnected
+        failPendingResults()
         scope.cancel()
     }
 
@@ -129,6 +141,7 @@ class HaWebSocketClient(
         backoffMs = INITIAL_BACKOFF_MS
         webSocket?.close(CLOSE_NORMAL, "background")
         webSocket = null
+        failPendingResults()
         // Preserve AuthFailed so reopening doesn't silently retry a bad token.
         if (_connectionState.value !is ConnectionState.AuthFailed) {
             _connectionState.value = ConnectionState.Disconnected
@@ -157,6 +170,7 @@ class HaWebSocketClient(
 
     private fun scheduleReconnect() {
         if (disposed) return
+        failPendingResults()
         if (_connectionState.value is ConnectionState.AuthFailed) return
         _connectionState.value = ConnectionState.Disconnected
         reconnectJob?.cancel()
@@ -193,10 +207,93 @@ class HaWebSocketClient(
                     socket.close(CLOSE_NORMAL, "auth_invalid")
                 }
                 "event" -> handleEvent(json)
+                "result" -> handleResult(json)
             }
         } catch (e: Exception) {
             Log.e(TAG, "[$connectionId] Message handling error", e)
         }
+    }
+
+    private fun handleResult(json: JSONObject) {
+        val deferred = pendingResults.remove(json.optInt("id")) ?: return
+        val result = if (json.optBoolean("success")) json.optJSONObject("result") else null
+        deferred.complete(result)
+    }
+
+    /**
+     * Fetches long-term statistics for [entityId] between [start] and [end],
+     * aggregated by [period] ("hour"/"day"). Used for long chart ranges where
+     * the recorder has already purged raw states but keeps aggregated
+     * mean·min·max indefinitely — the same data HA's own UI falls back to.
+     *
+     * Returns an empty list if the socket can't connect in time, the request
+     * times out, or the entity has no statistics (e.g. no `state_class`).
+     */
+    suspend fun getStatistics(
+        entityId: String,
+        start: Instant,
+        end: Instant,
+        period: String
+    ): List<HaStatisticsPoint> {
+        if (disposed) return emptyList()
+        if (!awaitConnected()) return emptyList()
+        val socket = webSocket ?: return emptyList()
+
+        val id = messageId.getAndIncrement()
+        val deferred = CompletableDeferred<JSONObject?>()
+        pendingResults[id] = deferred
+
+        val request = JSONObject()
+            .put("id", id)
+            .put("type", "recorder/statistics_during_period")
+            .put("start_time", ISO.format(start))
+            .put("end_time", ISO.format(end))
+            .put("statistic_ids", JSONArray().put(entityId))
+            .put("period", period)
+            .put("types", JSONArray().put("mean"))
+
+        val result = try {
+            if (!socket.send(request.toString())) {
+                pendingResults.remove(id)
+                return emptyList()
+            }
+            withTimeoutOrNull(REQUEST_TIMEOUT_MS) { deferred.await() }
+        } finally {
+            pendingResults.remove(id)
+        }
+
+        val buckets = result?.optJSONArray(entityId) ?: return emptyList()
+        return buildList {
+            for (i in 0 until buckets.length()) {
+                val bucket = buckets.optJSONObject(i) ?: continue
+                add(
+                    HaStatisticsPoint(
+                        startMs = bucket.optLong("start"),
+                        mean = if (bucket.isNull("mean")) null else bucket.optDouble("mean")
+                    )
+                )
+            }
+        }
+    }
+
+    /** Suspends until Connected, kicking off a connect if needed. */
+    private suspend fun awaitConnected(): Boolean {
+        if (_connectionState.value is ConnectionState.Connected) return true
+        if (_connectionState.value is ConnectionState.AuthFailed) return false
+        ensureConnected()
+        return withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
+            connectionState.first {
+                it is ConnectionState.Connected || it is ConnectionState.AuthFailed
+            }
+            _connectionState.value is ConnectionState.Connected
+        } ?: false
+    }
+
+    /** Unblocks any in-flight requests when the socket drops. */
+    private fun failPendingResults() {
+        if (pendingResults.isEmpty()) return
+        pendingResults.values.forEach { it.complete(null) }
+        pendingResults.clear()
     }
 
     private fun handleEvent(json: JSONObject) {
@@ -212,5 +309,8 @@ class HaWebSocketClient(
         private const val INITIAL_BACKOFF_MS = 2_000L
         private const val MAX_BACKOFF_MS = 60_000L
         private const val CLOSE_NORMAL = 1000
+        private const val CONNECT_TIMEOUT_MS = 8_000L
+        private const val REQUEST_TIMEOUT_MS = 20_000L
+        private val ISO: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
     }
 }

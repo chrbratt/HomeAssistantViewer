@@ -40,6 +40,18 @@ class TimelineTicksTest {
         assertEquals(1L, niceTimeStepSeconds(spanSeconds = 3L))
     }
 
+    @Test
+    fun `picks a multi-week step for a six-month window`() {
+        // 180 d / 5 ≈ 36 d/tick → smallest candidate ≥ that is 60 d.
+        assertEquals(60 * 86_400L, niceTimeStepSeconds(spanSeconds = 180 * 86_400L))
+    }
+
+    @Test
+    fun `picks a multi-month step for a one-year window`() {
+        // 365 d / 5 = 73 d/tick → smallest candidate ≥ that is 90 d.
+        assertEquals(90 * 86_400L, niceTimeStepSeconds(spanSeconds = 365 * 86_400L))
+    }
+
     // --- niceTimeTicks ----------------------------------------------------
 
     @Test

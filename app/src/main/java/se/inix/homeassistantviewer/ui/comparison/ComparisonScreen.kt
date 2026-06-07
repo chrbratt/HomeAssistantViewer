@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import se.inix.homeassistantviewer.domain.history.HistoryExportFeedback
-import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.ui.common.rememberHistoryCsvExportLauncher
 
 @OptIn(ExperimentalMaterial3Api::class)

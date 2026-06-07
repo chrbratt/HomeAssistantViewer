@@ -50,6 +50,14 @@ class BinaryStateTimelineLogicTest {
         assertEquals(2_000L, window?.endEpoch)
     }
 
+    @Test
+    fun `computeWindow anchors left edge to requested range start`() {
+        val points = listOf(pt(500, 1.0), pt(900, 0.0))
+        val window = computeWindow(points, nowEpoch = 1_000L, requestedStartEpoch = 0L)
+        assertEquals(0L, window?.startEpoch)
+        assertEquals(1_000L, window?.endEpoch)
+    }
+
     // --- computeOnIntervals ----------------------------------------------
 
     @Test

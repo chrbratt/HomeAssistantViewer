@@ -77,7 +77,9 @@ internal fun CategoricalStateTimeline(
         }
     }
 
-    val window = remember(series, nowEpoch) { computeWindow(series.points, nowEpoch) } ?: return
+    val window = remember(series, range, nowEpoch) {
+        computeWindow(series.points, nowEpoch, range.startEpoch(nowEpoch))
+    } ?: return
     val intervals = remember(series, window) {
         computeStateIntervals(series.points, windowEnd = window.endEpoch)
     }

@@ -27,14 +27,15 @@ class ComparisonViewModelTest {
     @Before fun setUp() { Dispatchers.setMain(testDispatcher) }
     @After fun tearDown() { Dispatchers.resetMain() }
 
-    private class FakeComparisonDataSource : ComparisonHistoryDataSource {
+    private open class FakeComparisonDataSource : ComparisonHistoryDataSource {
         val historyCalls = mutableListOf<Triple<String, String, Instant>>()
 
         override suspend fun getHistory(
             connectionId: String,
             entityId: String,
             start: Instant,
-            end: Instant
+            end: Instant,
+            statisticsPeriod: se.inix.homeassistantviewer.domain.history.StatisticsPeriod?
         ): List<HaHistoryRow> {
             historyCalls += Triple(connectionId, entityId, start)
             return listOf(
@@ -49,10 +50,9 @@ class ComparisonViewModelTest {
         ): HaEntityState? = HaEntityState(
             entityId = entityId,
             state = "21",
-            attributes = emptyMap(),
+            attributes = mapOf("unit_of_measurement" to "°C"),
             lastChanged = "2026-01-01T01:00:00Z",
-            lastUpdated = "2026-01-01T01:00:00Z",
-            unitOfMeasurement = "°C"
+            lastUpdated = "2026-01-01T01:00:00Z"
         )
     }
 
@@ -95,7 +95,8 @@ class ComparisonViewModelTest {
                 connectionId: String,
                 entityId: String,
                 start: Instant,
-                end: Instant
+                end: Instant,
+                statisticsPeriod: se.inix.homeassistantviewer.domain.history.StatisticsPeriod?
             ): List<HaHistoryRow> = listOf(
                 HaHistoryRow("on", "2026-01-01T00:00:00Z"),
                 HaHistoryRow("off", "2026-01-01T01:00:00Z")
