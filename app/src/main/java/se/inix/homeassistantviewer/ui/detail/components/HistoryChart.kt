@@ -38,7 +38,7 @@ import java.time.format.DateTimeFormatter
  * Entry point for rendering an entity's [HistorySeries].
  *
  * Numeric and binary series render very differently:
- *  - Numeric (temperature, lux, power, …) → smooth Catmull-Rom line chart
+ *  - Numeric (temperature, lux, power, …) → smooth cubic line chart
  *    with free Y range, drawn via Vico's `LineCartesianLayer`.
  *  - Binary (switch, light, lock, binary_sensor) → HA-style state timeline
  *    with filled ON blocks, drawn via Compose Canvas. Vico's line layer
@@ -62,7 +62,7 @@ internal fun HistoryChart(
 }
 
 /**
- * Smooth Catmull-Rom line chart for continuous numeric series (temperature,
+ * Smooth cubic line chart for continuous numeric series (temperature,
  * humidity, lux, power, etc.). Y axis auto-fits the data, Y labels live
  * inside the chart area so the line gets the full width. A zero reference
  * line is drawn when the series crosses below zero.
@@ -123,7 +123,7 @@ private fun NumericHistoryChart(
                     LineCartesianLayer.rememberLine(
                         fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
                         areaFill = LineCartesianLayer.AreaFill.single(Fill(areaColor)),
-                        interpolator = LineCartesianLayer.Interpolator.catmullRom()
+                        interpolator = LineCartesianLayer.Interpolator.cubic()
                     )
                 ),
                 rangeProvider = remember { AdaptiveVisibleYRangeProvider }

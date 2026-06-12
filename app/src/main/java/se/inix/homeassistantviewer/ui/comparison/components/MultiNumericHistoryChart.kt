@@ -132,7 +132,7 @@ private fun MultiNumericHistoryChart(
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(color)),
             areaFill = null,
-            interpolator = LineCartesianLayer.Interpolator.catmullRom()
+            interpolator = LineCartesianLayer.Interpolator.cubic()
         )
     }
 
