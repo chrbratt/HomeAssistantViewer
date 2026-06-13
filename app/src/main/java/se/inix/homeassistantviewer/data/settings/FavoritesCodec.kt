@@ -4,6 +4,19 @@ import se.inix.homeassistantviewer.data.model.FavoriteItem
 import java.net.URLDecoder
 import java.net.URLEncoder
 
+private fun CardTimestamp.toToken(): String = when (this) {
+    CardTimestamp.NONE -> "N"
+    CardTimestamp.LAST_UPDATED -> "U"
+    CardTimestamp.LAST_REPORTED -> "R"
+}
+
+private fun cardTimestampFromToken(token: String?): CardTimestamp? = when (token) {
+    "N" -> CardTimestamp.NONE
+    "U" -> CardTimestamp.LAST_UPDATED
+    "R" -> CardTimestamp.LAST_REPORTED
+    else -> null
+}
+
 /**
  * Pure serialization codec for the favourites list stored in DataStore.
  *
@@ -13,10 +26,16 @@ import java.net.URLEncoder
  *
  * **Format** (comma-separated tokens). Each token is one of:
  *
- *  - `e:<connId>|<entityId>`                       — entity favourite
- *  - `e:<connId>|<entityId>|<urlEncoded-name>`     — renamed favourite
- *  - `d:<uuid>`                                    — plain divider
- *  - `d:<uuid>|<urlEncoded-title>`                 — divider with heading
+ *  - `e:<connId>|<entityId>`                          — entity favourite
+ *  - `e:<connId>|<entityId>|<urlEncoded-name>`        — renamed favourite
+ *  - `e:<connId>|<entityId>|<name>|<ts>`              — with timestamp override
+ *  - `d:<uuid>`                                       — plain divider
+ *  - `d:<uuid>|<urlEncoded-title>`                    — divider with heading
+ *
+ * The `<ts>` token is a single letter (`N`/`U`/`R`) for the per-entity
+ * card-timestamp override; absent means "inherit the global setting". When an
+ * override is present but the name is empty the name slot is kept empty so the
+ * positional layout (`||R`) stays unambiguous.
  *
  * The `e:` / `d:` discriminator is what distinguishes a *renamed entity*
  * (also has one `|`) from a *titled divider* (also has one `|`) — without
@@ -38,9 +57,15 @@ internal object FavoritesCodec {
             when (item) {
                 is FavoriteItem.Entity -> {
                     val core = "e:${item.connectionId}|${item.entityId}"
-                    val name = item.customName
-                    if (name.isNullOrBlank()) core
-                    else "$core|${URLEncoder.encode(name, "UTF-8")}"
+                    val nameField =
+                        if (item.customName.isNullOrBlank()) ""
+                        else URLEncoder.encode(item.customName, "UTF-8")
+                    val tsField = item.timestampOverride?.toToken()
+                    when {
+                        tsField != null -> "$core|$nameField|$tsField"
+                        nameField.isNotEmpty() -> "$core|$nameField"
+                        else -> core
+                    }
                 }
                 is FavoriteItem.Divider -> {
                     val core = "d:${item.id}"
@@ -63,13 +88,17 @@ internal object FavoritesCodec {
         }
 
     private fun parseEntity(body: String): FavoriteItem.Entity? {
-        val parts = body.split("|", limit = 3)
+        val parts = body.split("|", limit = 4)
         if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) return null
-        val customName = parts.getOrNull(2)?.let { decodeOrNull(it) }
+        val customName = parts.getOrNull(2)
+            ?.takeUnless { it.isEmpty() }
+            ?.let { decodeOrNull(it) }
+        val timestampOverride = cardTimestampFromToken(parts.getOrNull(3))
         return FavoriteItem.Entity(
             connectionId = parts[0],
             entityId = parts[1],
-            customName = customName?.takeUnless { it.isBlank() }
+            customName = customName?.takeUnless { it.isBlank() },
+            timestampOverride = timestampOverride
         )
     }
 

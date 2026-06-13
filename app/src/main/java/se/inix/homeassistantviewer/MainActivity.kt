@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
             val colorPalette by settingsViewModel.colorPalette.collectAsStateWithLifecycle()
             val density by settingsViewModel.density.collectAsStateWithLifecycle()
+            val textContrast by settingsViewModel.textContrast.collectAsStateWithLifecycle()
 
             val darkTheme = when (themeMode) {
                 ThemeMode.LIGHT   -> false
@@ -59,7 +60,11 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM  -> isSystemInDarkTheme()
             }
 
-            HomeAssistantStugaTheme(darkTheme = darkTheme, palette = colorPalette) {
+            HomeAssistantStugaTheme(
+                darkTheme = darkTheme,
+                palette = colorPalette,
+                textContrast = textContrast
+            ) {
                 // Binds the chosen density once at the root of the
                 // composition so every card and the grid read it via
                 // LocalCardSpacing without anyone passing it around.
@@ -170,6 +175,19 @@ fun StugaApp() {
                         saveCustomName = { name ->
                             repo.setFavoriteCustomName(connectionId, entityId, name)
                         },
+                        timestampOverrideSource = repo.favorites.map { favs ->
+                            favs
+                                .filterIsInstance<FavoriteItem.Entity>()
+                                .firstOrNull {
+                                    it.connectionId == connectionId &&
+                                        it.entityId == entityId
+                                }
+                                ?.timestampOverride
+                        },
+                        saveTimestampOverride = { override ->
+                            repo.setFavoriteTimestampOverride(connectionId, entityId, override)
+                        },
+                        globalCardTimestampSource = repo.cardTimestamp,
                         connections = repo.connections,
                         // Lets the detail screen dispatch toggles, brightness,
                         // cover positions etc. via the same dispatcher path

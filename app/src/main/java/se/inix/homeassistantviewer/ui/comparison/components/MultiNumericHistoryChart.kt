@@ -45,8 +45,10 @@ import se.inix.homeassistantviewer.domain.history.HistoryRange
 import se.inix.homeassistantviewer.domain.history.HistorySeries
 import se.inix.homeassistantviewer.ui.detail.components.AdaptiveVisibleYRangeProvider
 import se.inix.homeassistantviewer.ui.detail.components.ChartFrame
+import se.inix.homeassistantviewer.ui.detail.components.MARKER_VALUE_DECIMALS
 import se.inix.homeassistantviewer.ui.detail.components.SyncAdaptiveYRange
 import se.inix.homeassistantviewer.ui.detail.components.buildChartFrame
+import se.inix.homeassistantviewer.ui.detail.components.formatFixedDecimals
 import se.inix.homeassistantviewer.ui.detail.components.mergePlotPoints
 import se.inix.homeassistantviewer.ui.detail.components.rememberAdaptiveStartAxis
 import se.inix.homeassistantviewer.ui.detail.components.rememberZeroLineDecoration
@@ -238,7 +240,13 @@ private fun rememberComparisonMarker(
         DateTimeFormatter.ofPattern(timePattern).withZone(ZoneId.systemDefault())
     }
     return rememberDefaultCartesianMarker(
-        label = rememberTextComponent(style = labelStyle),
+        // One line per drawn series plus the timestamp line; otherwise Vico's
+        // default single-line component truncates the marker to just the
+        // timestamp and hides every series value.
+        label = rememberTextComponent(
+            style = labelStyle,
+            lineCount = (frames.size + 1).coerceAtLeast(2)
+        ),
         valueFormatter = remember(frames, xOffsetSeconds, timeFormatter) {
             DefaultCartesianMarker.ValueFormatter { _, targets ->
                 val lineTargets = targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
@@ -254,7 +262,8 @@ private fun rememberComparisonMarker(
                             val meta = frames.getOrNull(seriesIndex)?.first
                             val name = meta?.displayName ?: "Series ${seriesIndex + 1}"
                             val unitSuffix = meta?.unit?.let { " $it" }.orEmpty()
-                            appendLine("$name: ${point.entry.y}$unitSuffix")
+                            val value = formatFixedDecimals(point.entry.y, MARKER_VALUE_DECIMALS)
+                            appendLine("$name: $value$unitSuffix")
                         }
                     }
                 }.trim()

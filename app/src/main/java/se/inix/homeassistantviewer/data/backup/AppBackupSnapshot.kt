@@ -5,8 +5,10 @@ import com.squareup.moshi.JsonClass
 import se.inix.homeassistantviewer.data.model.ComparisonEntity
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
+import se.inix.homeassistantviewer.data.settings.CardTimestamp
 import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.Density
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 
 /**
@@ -25,7 +27,17 @@ data class AppBackupSnapshot(
     @param:Json(name = "comparisonSelection") val comparisonSelection: List<String>? = null,
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = 2
+        /**
+         * Backup schema version. Bumped whenever the snapshot shape changes
+         * so [BackupMigrations] can upgrade older files to the current shape.
+         *
+         *  - v1 — initial format (no `comparisonSelection`).
+         *  - v2 — added `comparisonSelection`.
+         *  - v3 — added `dashboard.textContrast`.
+         *  - v4 — added `dashboard.cardTimestamp` + per-favourite
+         *    `timestampOverride`.
+         */
+        const val CURRENT_FORMAT_VERSION = 4
     }
 }
 
@@ -50,6 +62,8 @@ data class FavoriteBackupItem(
     @param:Json(name = "entityId") val entityId: String? = null,
     /** User-chosen display name overriding HA's friendly_name; null = use HA name. */
     @param:Json(name = "customName") val customName: String? = null,
+    /** Per-entity card-timestamp override (enum name); null = inherit global. */
+    @param:Json(name = "timestampOverride") val timestampOverride: String? = null,
     @param:Json(name = "id") val id: String? = null,
     @param:Json(name = "title") val title: String? = null,
 )
@@ -60,6 +74,10 @@ data class DashboardBackupPrefs(
     @param:Json(name = "themeMode") val themeMode: String,
     @param:Json(name = "colorPalette") val colorPalette: String,
     @param:Json(name = "density") val density: String,
+    /** Body-text contrast level; absent in backups made before this setting existed. */
+    @param:Json(name = "textContrast") val textContrast: String = TextContrast.BALANCED.name,
+    /** Global card-timestamp choice; absent in backups made before this setting existed. */
+    @param:Json(name = "cardTimestamp") val cardTimestamp: String = CardTimestamp.NONE.name,
 )
 
 fun FavoriteItem.toBackupItem(): FavoriteBackupItem = when (this) {
@@ -67,7 +85,8 @@ fun FavoriteItem.toBackupItem(): FavoriteBackupItem = when (this) {
         type = TYPE_ENTITY,
         connectionId = connectionId,
         entityId = entityId,
-        customName = customName
+        customName = customName,
+        timestampOverride = timestampOverride?.name
     )
     is FavoriteItem.Divider -> FavoriteBackupItem(
         type = TYPE_DIVIDER,
@@ -83,7 +102,9 @@ fun FavoriteBackupItem.toFavoriteItem(): FavoriteItem? = when (type) {
         FavoriteItem.Entity(
             connectionId = connId,
             entityId = entId,
-            customName = customName?.trim()?.takeUnless { it.isEmpty() }
+            customName = customName?.trim()?.takeUnless { it.isEmpty() },
+            timestampOverride = timestampOverride
+                ?.let { runCatching { CardTimestamp.valueOf(it) }.getOrNull() }
         )
     }
     TYPE_DIVIDER -> {
@@ -101,11 +122,15 @@ fun dashboardBackupPrefs(
     themeMode: ThemeMode,
     colorPalette: ColorPalette,
     density: Density,
+    textContrast: TextContrast,
+    cardTimestamp: CardTimestamp,
 ): DashboardBackupPrefs = DashboardBackupPrefs(
     columns = columns,
     themeMode = themeMode.name,
     colorPalette = colorPalette.name,
     density = density.name,
+    textContrast = textContrast.name,
+    cardTimestamp = cardTimestamp.name,
 )
 
 const val TYPE_ENTITY = "entity"

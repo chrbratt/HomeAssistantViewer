@@ -230,6 +230,9 @@ internal fun formatChartAxisValue(value: Double, span: Double): String {
     return formatFixedDecimals(value, decimals)
 }
 
+/** Decimal places used when rendering a value inside a touch marker/tooltip. */
+internal const val MARKER_VALUE_DECIMALS: Int = 2
+
 internal fun formatFixedDecimals(value: Double, decimals: Int): String {
     if (decimals <= 0) return kotlin.math.round(value).toLong().toString()
     val factor = 10.0.pow(decimals)

@@ -75,6 +75,29 @@ class FavoritesCodecTest {
         assertEquals("d:d-1", raw)
     }
 
+    // --- Timestamp override ----------------------------------------------
+
+    @Test
+    fun `round-trips a timestamp override with and without a name`() {
+        val named = entity.copy(customName = "Kök", timestampOverride = CardTimestamp.LAST_REPORTED)
+        val unnamed = entity.copy(timestampOverride = CardTimestamp.LAST_UPDATED)
+        val off = entity.copy(timestampOverride = CardTimestamp.NONE)
+        val input = listOf(named, unnamed, off)
+        assertEquals(input, FavoritesCodec.deserialize(FavoritesCodec.serialize(input)))
+    }
+
+    @Test
+    fun `override with no name keeps the name slot empty`() {
+        val raw = FavoritesCodec.serialize(listOf(entity.copy(timestampOverride = CardTimestamp.LAST_REPORTED)))
+        assertEquals("e:c1|light.kitchen||R", raw)
+    }
+
+    @Test
+    fun `absent override parses as inherit (null)`() {
+        val parsed = FavoritesCodec.deserialize("e:c1|light.kitchen|Kök")
+        assertNull((parsed.first() as FavoriteItem.Entity).timestampOverride)
+    }
+
     // --- Legacy compatibility --------------------------------------------
 
     @Test

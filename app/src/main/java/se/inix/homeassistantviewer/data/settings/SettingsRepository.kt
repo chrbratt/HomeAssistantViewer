@@ -63,6 +63,8 @@ class SettingsRepository(context: Context) {
     val themeMode: StateFlow<ThemeMode> = dashboardPrefsStore.themeMode
     val colorPalette: StateFlow<ColorPalette> = dashboardPrefsStore.colorPalette
     val density: StateFlow<Density> = dashboardPrefsStore.density
+    val textContrast: StateFlow<TextContrast> = dashboardPrefsStore.textContrast
+    val cardTimestamp: StateFlow<CardTimestamp> = dashboardPrefsStore.cardTimestamp
 
     init {
         scope.launch {
@@ -119,6 +121,13 @@ class SettingsRepository(context: Context) {
     fun setFavoriteCustomName(connectionId: String, entityId: String, name: String?) =
         favoritesStore.setEntityCustomName(connectionId, entityId, name)
 
+    /**
+     * Sets the per-entity card-timestamp override. Pass `null` to clear the
+     * override so the entity inherits the global [cardTimestamp] choice.
+     */
+    fun setFavoriteTimestampOverride(connectionId: String, entityId: String, override: CardTimestamp?) =
+        favoritesStore.setEntityTimestampOverride(connectionId, entityId, override)
+
     /** Sets a divider's section heading. Pass `null` (or blank) to remove the heading. */
     fun setDividerTitle(id: String, title: String?) =
         favoritesStore.setDividerTitle(id, title)
@@ -131,6 +140,12 @@ class SettingsRepository(context: Context) {
 
     fun saveDensity(density: Density) = dashboardPrefsStore.saveDensity(density)
 
+    fun saveTextContrast(textContrast: TextContrast) =
+        dashboardPrefsStore.saveTextContrast(textContrast)
+
+    fun saveCardTimestamp(cardTimestamp: CardTimestamp) =
+        dashboardPrefsStore.saveCardTimestamp(cardTimestamp)
+
     /** Builds a portable snapshot of all user configuration. */
     fun createBackupSnapshot(): AppBackupSnapshot = AppBackupSnapshot(
         exportedAt = Instant.now().toString(),
@@ -141,7 +156,9 @@ class SettingsRepository(context: Context) {
             columns = dashboardColumns.value,
             themeMode = themeMode.value,
             colorPalette = colorPalette.value,
-            density = density.value
+            density = density.value,
+            textContrast = textContrast.value,
+            cardTimestamp = cardTimestamp.value
         ),
         comparisonSelection = comparisonSelection.value.map { it.toBackupKey() }
     )
@@ -163,7 +180,10 @@ class SettingsRepository(context: Context) {
             columns = dashboard.columns,
             themeMode = ThemeMode.valueOf(dashboard.themeMode),
             colorPalette = ColorPalette.valueOf(dashboard.colorPalette),
-            density = Density.valueOf(dashboard.density)
+            density = Density.valueOf(dashboard.density),
+            textContrast = TextContrast.valueOf(dashboard.textContrast),
+            cardTimestamp = runCatching { CardTimestamp.valueOf(dashboard.cardTimestamp) }
+                .getOrDefault(CardTimestamp.NONE)
         )
     }
 

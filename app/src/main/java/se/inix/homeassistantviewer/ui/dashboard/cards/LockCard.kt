@@ -49,7 +49,9 @@ internal fun LockCard(
         modifier = modifier,
         onClick = toggle,
         onOpenDetail = onOpenDetail,
-        comparisonSelection = comparisonSelection
+        comparisonSelection = comparisonSelection,
+        timestamp = item.footerTimestamp(),
+        isStale = item.isStale
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

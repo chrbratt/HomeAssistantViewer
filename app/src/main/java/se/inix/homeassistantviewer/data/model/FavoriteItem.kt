@@ -1,5 +1,7 @@
 package se.inix.homeassistantviewer.data.model
 
+import se.inix.homeassistantviewer.data.settings.CardTimestamp
+
 /**
  * One slot on the dashboard. Either an actual Home Assistant entity, or a
  * full-width divider the user can insert to break a row in the staggered grid.
@@ -14,11 +16,15 @@ sealed class FavoriteItem {
      * @param customName user-given display name overriding HA's `friendly_name`.
      *                   `null` means "use the HA-provided name". Empty strings
      *                   are not permitted — callers normalise to `null` first.
+     * @param timestampOverride per-entity card-timestamp choice; `null` means
+     *                   "inherit the global setting". A non-null value wins
+     *                   over the global default.
      */
     data class Entity(
         val connectionId: String,
         val entityId: String,
-        val customName: String? = null
+        val customName: String? = null,
+        val timestampOverride: CardTimestamp? = null
     ) : FavoriteItem() {
         override val key: String get() = "e:$connectionId/$entityId"
     }

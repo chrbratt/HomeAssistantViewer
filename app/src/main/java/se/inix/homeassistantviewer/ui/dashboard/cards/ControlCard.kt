@@ -64,7 +64,9 @@ internal fun ControlCard(
         modifier = modifier,
         onClick = { onAction(EntityAction.Toggle(item.connectionId, item.entityId)) },
         onOpenDetail = onOpenDetail,
-        comparisonSelection = comparisonSelection
+        comparisonSelection = comparisonSelection,
+        timestamp = item.footerTimestamp(),
+        isStale = item.isStale
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -13,10 +13,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import java.time.Instant
 
 /**
  * Standard outer shell for every dashboard card. Encapsulates:
@@ -29,6 +31,11 @@ import androidx.compose.ui.unit.dp
  *
  * When [onClick] is set, only the body is clickable so the header stays free
  * for comparison selection while selection mode is active.
+ *
+ * [timestamp] (when non-null) renders a subtle "time since last" footer; when
+ * [isStale] is true the body is dimmed and the footer flips to an "outdated"
+ * marker — the entity is momentarily unavailable but we keep showing its last
+ * known value.
  */
 @Composable
 internal fun DashboardCardShell(
@@ -39,6 +46,8 @@ internal fun DashboardCardShell(
     onOpenDetail: (() -> Unit)? = null,
     onRequestRename: (() -> Unit)? = null,
     comparisonSelection: ComparisonSelectionUi? = null,
+    timestamp: Instant? = null,
+    isStale: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val trailing: (@Composable () -> Unit)? =
@@ -106,17 +115,30 @@ internal fun DashboardCardShell(
                 trailing = trailing,
                 modifier = headerModifier.fillMaxWidth()
             )
+            // The body (value/controls) is what goes stale; dim only it so the
+            // title and the footer marker stay legible.
+            val bodyModifier = Modifier
+                .fillMaxWidth()
+                .then(if (isStale) Modifier.alpha(STALE_BODY_ALPHA) else Modifier)
             if (onClick != null) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onClick),
+                    modifier = bodyModifier.clickable(onClick = onClick),
                     verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
                     content = content
                 )
             } else {
-                content()
+                Column(
+                    modifier = bodyModifier,
+                    verticalArrangement = Arrangement.spacedBy(CardStyle.Spacing),
+                    content = content
+                )
+            }
+            if (timestamp != null) {
+                CardTimestampFooter(timestamp = timestamp, isStale = isStale)
             }
         }
     }
 }
+
+/** How much the card body fades while showing a stale (outdated) value. */
+private const val STALE_BODY_ALPHA = 0.45f

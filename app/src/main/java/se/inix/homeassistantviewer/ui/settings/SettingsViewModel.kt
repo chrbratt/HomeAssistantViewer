@@ -20,9 +20,11 @@ import se.inix.homeassistantviewer.data.backup.BackupCodec
 import se.inix.homeassistantviewer.data.backup.BackupImporter
 import se.inix.homeassistantviewer.data.backup.BackupParseException
 import se.inix.homeassistantviewer.data.backup.InternalSnapshotStore
+import se.inix.homeassistantviewer.data.settings.CardTimestamp
 import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.Density
 import se.inix.homeassistantviewer.data.settings.SettingsRepository
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import java.io.IOException
 import java.time.LocalDate
@@ -39,6 +41,8 @@ class SettingsViewModel(
     val themeMode: StateFlow<ThemeMode> = settingsRepository.themeMode
     val colorPalette: StateFlow<ColorPalette> = settingsRepository.colorPalette
     val density: StateFlow<Density> = settingsRepository.density
+    val textContrast: StateFlow<TextContrast> = settingsRepository.textContrast
+    val cardTimestamp: StateFlow<CardTimestamp> = settingsRepository.cardTimestamp
 
     val comparisonSelectionCount: StateFlow<Int> = settingsRepository.comparisonSelection
         .map { it.size }
@@ -71,6 +75,14 @@ class SettingsViewModel(
 
     fun saveDensity(density: Density) {
         settingsRepository.saveDensity(density)
+    }
+
+    fun saveTextContrast(textContrast: TextContrast) {
+        settingsRepository.saveTextContrast(textContrast)
+    }
+
+    fun saveCardTimestamp(cardTimestamp: CardTimestamp) {
+        settingsRepository.saveCardTimestamp(cardTimestamp)
     }
 
     fun suggestExportFileName(): String {

@@ -6,6 +6,7 @@ import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.Density
 import se.inix.homeassistantviewer.data.settings.SettingsRepository
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.data.settings.UrlNormaliser
 
@@ -24,7 +25,10 @@ class BackupImporter(
         val message: String? = null
     )
 
-    fun restore(snapshot: AppBackupSnapshot): RestoreResult {
+    fun restore(rawSnapshot: AppBackupSnapshot): RestoreResult {
+        // Lift older backups/snapshots to the current format first, so the
+        // rest of the flow only ever deals with the latest shape.
+        val snapshot = BackupMigrations.migrateToCurrent(rawSnapshot)
         validateForRestore(snapshot)?.let { return it }
 
         val connections = snapshot.connections.mapNotNull { validateConnection(it) }
@@ -133,5 +137,6 @@ internal fun parseDashboardForBackup(raw: DashboardBackupPrefs): DashboardBackup
     if (runCatching { ThemeMode.valueOf(raw.themeMode) }.isFailure) return null
     if (runCatching { ColorPalette.valueOf(raw.colorPalette) }.isFailure) return null
     if (runCatching { Density.valueOf(raw.density) }.isFailure) return null
+    if (runCatching { TextContrast.valueOf(raw.textContrast) }.isFailure) return null
     return raw
 }

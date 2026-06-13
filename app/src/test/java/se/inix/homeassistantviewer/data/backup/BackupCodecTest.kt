@@ -8,11 +8,57 @@ import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.Density
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 
 class BackupCodecTest {
 
     private val codec = BackupCodec()
+
+    @Test
+    fun `dashboard prefs default text contrast to BALANCED when field is absent`() {
+        // A backup made before the text-contrast setting existed has no
+        // such field; decoding must fall back to the safe default.
+        val legacyJson = """
+            {
+              "exportedAt": "2026-05-18T12:00:00Z",
+              "appVersion": "1.0.0",
+              "connections": [],
+              "favorites": [],
+              "dashboard": {
+                "columns": 2,
+                "themeMode": "DARK",
+                "colorPalette": "OCEAN",
+                "density": "COMFORTABLE"
+              }
+            }
+        """.trimIndent()
+
+        val decoded = codec.decode(legacyJson.encodeToByteArray())
+
+        assertEquals(TextContrast.BALANCED.name, decoded.dashboard.textContrast)
+    }
+
+    @Test
+    fun `round-trip preserves the chosen text contrast`() {
+        val original = AppBackupSnapshot(
+            exportedAt = "2026-05-18T12:00:00Z",
+            appVersion = "1.0.3",
+            connections = emptyList(),
+            favorites = emptyList(),
+            dashboard = DashboardBackupPrefs(
+                columns = 2,
+                themeMode = ThemeMode.DARK.name,
+                colorPalette = ColorPalette.OCEAN.name,
+                density = Density.COMFORTABLE.name,
+                textContrast = TextContrast.SOFT.name
+            )
+        )
+
+        val decoded = codec.decode(codec.encode(original))
+
+        assertEquals(TextContrast.SOFT.name, decoded.dashboard.textContrast)
+    }
 
     @Test
     fun `round-trip preserves connections tokens favourites with custom names and dividers`() {

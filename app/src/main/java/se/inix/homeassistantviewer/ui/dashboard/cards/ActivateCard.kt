@@ -46,7 +46,9 @@ internal fun ActivateCard(
         colors = colors,
         modifier = modifier,
         onClick = { onAction(action) },
-        onRequestRename = onRequestRename
+        onRequestRename = onRequestRename,
+        timestamp = item.footerTimestamp(),
+        isStale = item.isStale
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

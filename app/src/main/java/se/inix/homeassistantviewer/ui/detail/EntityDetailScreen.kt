@@ -37,9 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import se.inix.homeassistantviewer.data.model.HaEntityState
+import se.inix.homeassistantviewer.data.settings.resolveCardTimestamp
 import se.inix.homeassistantviewer.domain.history.HistoryExportFeedback
 import se.inix.homeassistantviewer.domain.history.HistoryRange
-import se.inix.homeassistantviewer.ui.common.EditTextDialog
 import se.inix.homeassistantviewer.ui.common.rememberHistoryCsvExportLauncher
 import se.inix.homeassistantviewer.ui.dashboard.DashboardItem
 import se.inix.homeassistantviewer.ui.dashboard.cards.EntityCard
@@ -73,6 +73,8 @@ internal fun EntityDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedRange by viewModel.selectedRange.collectAsStateWithLifecycle()
     val customName by viewModel.customName.collectAsStateWithLifecycle()
+    val timestampOverride by viewModel.timestampOverride.collectAsStateWithLifecycle()
+    val cardTimestamp by viewModel.globalCardTimestamp.collectAsStateWithLifecycle()
 
     var renaming by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -95,11 +97,14 @@ internal fun EntityDetailScreen(
         }
     }
 
+    val liveState = currentState(uiState)
     val currentItem = DashboardItem.Entity(
         connectionId = viewModel.connectionId,
         entityId = viewModel.entityId,
-        entity = currentState(uiState),
-        customName = customName
+        entity = liveState,
+        customName = customName,
+        timestampMode = resolveCardTimestamp(timestampOverride, cardTimestamp),
+        isStale = liveState != null && !liveState.hasUsableValue
     )
 
     Scaffold(
@@ -152,16 +157,15 @@ internal fun EntityDetailScreen(
 
     if (renaming) {
         val haName = currentState(uiState)?.friendlyName ?: viewModel.entityId
-        EditTextDialog(
-            title = "Rename entity",
-            label = "Display name",
+        EntityDetailEditDialog(
             // Pre-fill with the *current* override (or HA's name if none), so
             // editing nudges the existing value rather than forcing a retype.
-            initialValue = customName ?: haName,
-            placeholder = haName,
-            supportingText = "Leave empty to use the Home Assistant name (\"$haName\").",
-            onConfirm = { name ->
+            initialName = customName ?: haName,
+            haName = haName,
+            initialOverride = timestampOverride,
+            onConfirm = { name, override ->
                 viewModel.setCustomName(name)
+                viewModel.setTimestampOverride(override)
                 renaming = false
             },
             onDismiss = { renaming = false }

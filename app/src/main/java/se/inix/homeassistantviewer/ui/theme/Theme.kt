@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import se.inix.homeassistantviewer.data.settings.ColorPalette
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.ui.theme.palettes.AmberPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.AppPalette
 import se.inix.homeassistantviewer.ui.theme.palettes.AuroraPalette
@@ -29,9 +30,11 @@ import se.inix.homeassistantviewer.ui.theme.palettes.SunsetPalette
 fun HomeAssistantStugaTheme(
     darkTheme: Boolean,
     palette: ColorPalette = ColorPalette.DYNAMIC,
+    textContrast: TextContrast = TextContrast.BALANCED,
     content: @Composable () -> Unit
 ) {
     val colorScheme = resolveColorScheme(palette, darkTheme)
+        .withTextContrast(textContrast)
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -43,6 +46,7 @@ fun HomeAssistantStugaTheme(
 private fun resolveColorScheme(palette: ColorPalette, darkTheme: Boolean): ColorScheme {
     if (palette == ColorPalette.DYNAMIC && supportsDynamicColor()) {
         val context = LocalContext.current
+        // Material You already ships a complete tonal surface ladder.
         return if (darkTheme) dynamicDarkColorScheme(context)
         else dynamicLightColorScheme(context)
     }
@@ -55,7 +59,11 @@ private fun resolveColorScheme(palette: ColorPalette, darkTheme: Boolean): Color
         // DYNAMIC on a pre-S device falls through here, intentionally.
         ColorPalette.OCEAN, ColorPalette.DYNAMIC -> OceanPalette
     }
-    return if (darkTheme) handCrafted.dark else handCrafted.light
+    // The hand-crafted palettes only specify the core roles, so fill in
+    // the surface-container family from their own hues instead of the
+    // default M3 baseline.
+    return if (darkTheme) handCrafted.dark.withTonalSurfaces(dark = true)
+    else handCrafted.light.withTonalSurfaces(dark = false)
 }
 
 private fun supportsDynamicColor(): Boolean =

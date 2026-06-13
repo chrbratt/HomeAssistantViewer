@@ -56,7 +56,9 @@ internal fun ClimateCard(
         colors = colors,
         modifier = modifier,
         onOpenDetail = onOpenDetail,
-        comparisonSelection = comparisonSelection
+        comparisonSelection = comparisonSelection,
+        timestamp = item.footerTimestamp(),
+        isStale = item.isStale
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

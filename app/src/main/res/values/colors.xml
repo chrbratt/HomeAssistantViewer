@@ -1,2 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources />
+<resources>
+    <!--
+      Background shown by the window before Compose draws its first frame.
+      Kept close to the light palettes' surface so cold start doesn't flash
+      bright white. A matching dark value lives in values-night/colors.xml.
+    -->
+    <color name="window_background">#FBFCFE</color>
+</resources>

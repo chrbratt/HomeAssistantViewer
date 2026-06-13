@@ -51,8 +51,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import se.inix.homeassistantviewer.data.settings.CardTimestamp
 import se.inix.homeassistantviewer.data.settings.ColorPalette
 import se.inix.homeassistantviewer.data.settings.Density
+import se.inix.homeassistantviewer.data.settings.TextContrast
 import se.inix.homeassistantviewer.data.settings.ThemeMode
 import se.inix.homeassistantviewer.di.AppViewModelProvider
 
@@ -70,6 +72,8 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val colorPalette by viewModel.colorPalette.collectAsStateWithLifecycle()
     val density by viewModel.density.collectAsStateWithLifecycle()
+    val textContrast by viewModel.textContrast.collectAsStateWithLifecycle()
+    val cardTimestamp by viewModel.cardTimestamp.collectAsStateWithLifecycle()
     val comparisonSelectionCount by viewModel.comparisonSelectionCount.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -225,6 +229,16 @@ fun SettingsScreen(
                 onSelect = viewModel::saveColorPalette
             )
 
+            TextContrastCard(
+                selected = textContrast,
+                onSelect = viewModel::saveTextContrast
+            )
+
+            CardTimestampCard(
+                selected = cardTimestamp,
+                onSelect = viewModel::saveCardTimestamp
+            )
+
             BackupRestoreSection(viewModel = viewModel)
 
             NavigationRow(
@@ -233,6 +247,89 @@ fun SettingsScreen(
                 subtitle = "Version, author and more",
                 onClick = onNavigateToAbout
             )
+        }
+    }
+}
+
+/**
+ * Lets the user soften body text so it doesn't look like it's cutting into
+ * the surface on a high-brightness screen. The palette is untouched — only
+ * the on-surface text colours are eased toward their background.
+ */
+@Composable
+private fun TextContrastCard(
+    selected: TextContrast,
+    onSelect: (TextContrast) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Text contrast", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Soften body text if it looks too sharp against the background, " +
+                    "especially at high screen brightness.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val options = listOf(
+                TextContrast.CRISP to "Crisp",
+                TextContrast.BALANCED to "Balanced",
+                TextContrast.SOFT to "Soft",
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, (option, label) ->
+                    SegmentedButton(
+                        selected = selected == option,
+                        onClick = { onSelect(option) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                        label = { Text(label) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Global default for the subtle "time since last update" counter shown on
+ * every card. Individual entities can override this from their detail screen,
+ * and that per-entity choice always wins over this default.
+ */
+@Composable
+private fun CardTimestampCard(
+    selected: CardTimestamp,
+    onSelect: (CardTimestamp) -> Unit
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Card timestamp", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Show a small \"time since last update\" counter on every card. " +
+                    "\"Updated\" uses Home Assistant's last_updated; \"Reported\" uses " +
+                    "last_reported (when the entity last phoned home).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val options = listOf(
+                CardTimestamp.NONE to "Off",
+                CardTimestamp.LAST_UPDATED to "Updated",
+                CardTimestamp.LAST_REPORTED to "Reported",
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, (option, label) ->
+                    SegmentedButton(
+                        selected = selected == option,
+                        onClick = { onSelect(option) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                        label = { Text(label) }
+                    )
+                }
+            }
         }
     }
 }

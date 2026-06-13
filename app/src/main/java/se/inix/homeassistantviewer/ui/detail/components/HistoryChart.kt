@@ -168,7 +168,10 @@ private fun rememberValueMarker(
         DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     }
     return rememberDefaultCartesianMarker(
-        label = rememberTextComponent(style = labelStyle),
+        // The marker label must allow two lines, otherwise Vico's default
+        // single-line component truncates to the first line — which would
+        // drop the value and leave only the timestamp.
+        label = rememberTextComponent(style = labelStyle, lineCount = 2),
         valueFormatter = remember(unit, offsetSeconds, timeFormatter) {
             DefaultCartesianMarker.ValueFormatter { _, targets ->
                 val lineTargets = targets.filterIsInstance<LineCartesianLayerMarkerTarget>()
@@ -177,8 +180,11 @@ private fun rememberValueMarker(
                     Instant.ofEpochSecond(offsetSeconds + first.x.toLong())
                 )
                 val value = first.points.firstOrNull()?.entry?.y
+                    ?: return@ValueFormatter time
                 val unitSuffix = unit?.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
-                if (value == null) time else "$time\n$value$unitSuffix"
+                // Value first (the primary thing the user is reading off the
+                // chart), time underneath as context.
+                "${formatFixedDecimals(value, MARKER_VALUE_DECIMALS)}$unitSuffix\n$time"
             }
         }
     )

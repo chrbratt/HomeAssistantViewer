@@ -20,11 +20,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import se.inix.homeassistantviewer.data.events.AppEvents
 import se.inix.homeassistantviewer.data.model.ComparisonEntity
 import se.inix.homeassistantviewer.data.model.FavoriteItem
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.settings.SettingsRepository
+import se.inix.homeassistantviewer.data.settings.resolveCardTimestamp
 import se.inix.homeassistantviewer.data.ws.ConnectionPool
 import se.inix.homeassistantviewer.data.ws.ConnectionState
 
@@ -58,7 +61,15 @@ class DashboardViewModel(
     private val appEvents: AppEvents
 ) : ViewModel() {
 
+    // Holds the last *displayable* (good) state per entity. A temporary
+    // unavailable/unknown push does not overwrite a good value here — the key
+    // is tracked in [_staleKeys] instead, so the card keeps showing the last
+    // known value (dimmed) rather than going blank.
     private val _entityStateMap = MutableStateFlow<Map<EntityKey, HaEntityState>>(emptyMap())
+    private val _staleKeys = MutableStateFlow<Set<EntityKey>>(emptySet())
+    // Serialises merges so the map and the stale set stay consistent under the
+    // many concurrent producers (one WS collector per connection + REST fetches).
+    private val stateMutex = Mutex()
     private val _initState = MutableStateFlow<InitState>(InitState.Loading)
     private val _fetchingConnections = MutableStateFlow<Set<String>>(emptySet())
     private val _perConnectionState = MutableStateFlow<Map<String, ConnectionState>>(emptyMap())
@@ -70,15 +81,24 @@ class DashboardViewModel(
     private val dispatcher = EntityActionDispatcher(
         connectionPool = connectionPool,
         readState = { key -> _entityStateMap.value[key] },
-        optimistic = { key, value -> _entityStateMap.update { it + (key to value) } }
+        optimistic = { key, value ->
+            // A user-driven change always produces a real value, so it also
+            // clears any stale flag for that entity.
+            _entityStateMap.update { it + (key to value) }
+            _staleKeys.update { it - key }
+        }
     )
 
+    private val stateView: Flow<Pair<Map<EntityKey, HaEntityState>, Set<EntityKey>>> =
+        combine(_entityStateMap, _staleKeys) { map, stale -> map to stale }
+
     val uiState: StateFlow<DashboardUiState> = combine(
-        _entityStateMap,
+        stateView,
         settingsRepository.favorites,
         settingsRepository.connections,
-        _initState
-    ) { stateMap, favorites, connections, initState ->
+        _initState,
+        settingsRepository.cardTimestamp
+    ) { (stateMap, staleKeys), favorites, connections, initState, globalTimestamp ->
         when {
             connections.isEmpty() -> DashboardUiState.NoConnections
             favorites.isEmpty() -> DashboardUiState.NoFavorites
@@ -87,12 +107,17 @@ class DashboardViewModel(
             else -> DashboardUiState.Success(
                 items = favorites.map { fav ->
                     when (fav) {
-                        is FavoriteItem.Entity -> DashboardItem.Entity(
-                            connectionId = fav.connectionId,
-                            entityId = fav.entityId,
-                            entity = stateMap[EntityKey(fav.connectionId, fav.entityId)],
-                            customName = fav.customName
-                        )
+                        is FavoriteItem.Entity -> {
+                            val key = EntityKey(fav.connectionId, fav.entityId)
+                            DashboardItem.Entity(
+                                connectionId = fav.connectionId,
+                                entityId = fav.entityId,
+                                entity = stateMap[key],
+                                customName = fav.customName,
+                                timestampMode = resolveCardTimestamp(fav.timestampOverride, globalTimestamp),
+                                isStale = key in staleKeys
+                            )
+                        }
                         is FavoriteItem.Divider -> DashboardItem.Divider(fav.id, fav.title)
                     }
                 }
@@ -138,9 +163,36 @@ class DashboardViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             runCatching { fetchStatesInternal() }
-                .onSuccess { map -> if (map.isNotEmpty()) _entityStateMap.value = map }
+                .onSuccess { map -> mergeStates(map) }
                 .onFailure { Log.w(TAG, "Pull-to-refresh failed", it) }
             _isRefreshing.value = false
+        }
+    }
+
+    /**
+     * Merges fresh states into the displayable map while preserving the last
+     * known good value for entities that are momentarily `unavailable`/
+     * `unknown` (feature: show stale value dimmed instead of a blank card).
+     * Serialised via [stateMutex] so the map and [_staleKeys] never diverge.
+     */
+    private suspend fun mergeStates(incoming: Map<EntityKey, HaEntityState>) {
+        if (incoming.isEmpty()) return
+        stateMutex.withLock {
+            val map = _entityStateMap.value.toMutableMap()
+            val stale = _staleKeys.value.toMutableSet()
+            for ((key, state) in incoming) {
+                if (state.hasUsableValue) {
+                    map[key] = state
+                    stale.remove(key)
+                } else {
+                    // Only fall back to the unavailable state when we have
+                    // never seen a good value for this entity.
+                    if (!map.containsKey(key)) map[key] = state
+                    stale.add(key)
+                }
+            }
+            _entityStateMap.value = map
+            _staleKeys.value = stale
         }
     }
 
@@ -153,7 +205,7 @@ class DashboardViewModel(
         connectionPool.reconnectAll()
         viewModelScope.launch {
             runCatching { fetchStatesInternal() }
-                .onSuccess { map -> if (map.isNotEmpty()) _entityStateMap.value = map }
+                .onSuccess { map -> mergeStates(map) }
                 .onFailure { Log.w(TAG, "Foreground refresh failed", it) }
         }
     }
@@ -225,7 +277,10 @@ class DashboardViewModel(
     private fun observeConfigurationRestored() {
         viewModelScope.launch {
             appEvents.configurationRestoredEvents.collect {
-                _entityStateMap.value = emptyMap()
+                stateMutex.withLock {
+                    _entityStateMap.value = emptyMap()
+                    _staleKeys.value = emptySet()
+                }
                 fetchInitialSnapshot()
             }
         }
@@ -301,9 +356,7 @@ class DashboardViewModel(
         runCatching {
             repo.getStatesForEntities(favorites.map { it.entityId }.toSet())
         }.onSuccess { states ->
-            _entityStateMap.update { current ->
-                current + states.associateBy { EntityKey(connectionId, it.entityId) }
-            }
+            mergeStates(states.associateBy { EntityKey(connectionId, it.entityId) })
         }.onFailure { e ->
             Log.w(TAG, "Per-connection refresh failed for $connectionId", e)
         }
@@ -360,7 +413,7 @@ class DashboardViewModel(
             _initState.value = InitState.Loading
             runCatching { fetchStatesInternal() }.fold(
                 onSuccess = { map ->
-                    _entityStateMap.value = map
+                    mergeStates(map)
                     if (_initState.value !is InitState.Error) _initState.value = InitState.Ready
                 },
                 onFailure = { e ->
@@ -383,7 +436,7 @@ class DashboardViewModel(
                                     .filterIsInstance<FavoriteItem.Entity>()
                                     .any { it.connectionId == connectionId && it.entityId == entity.entityId }
                                 if (stillFavorite) {
-                                    _entityStateMap.update { it + (key to entity) }
+                                    mergeStates(mapOf(key to entity))
                                 }
                             }
                         }
@@ -424,7 +477,7 @@ class DashboardViewModel(
                         }.awaitAll().flatten().toMap()
                     }
                 }.onSuccess { map ->
-                    if (map.isNotEmpty()) _entityStateMap.update { it + map }
+                    mergeStates(map)
                     if (_initState.value !is InitState.Error) _initState.value = InitState.Ready
                 }.onFailure { e ->
                     Log.w(TAG, "Favorites refresh failed", e)

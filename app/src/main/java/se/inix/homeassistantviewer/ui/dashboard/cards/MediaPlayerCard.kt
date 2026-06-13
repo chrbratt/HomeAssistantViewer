@@ -58,7 +58,9 @@ internal fun MediaPlayerCard(
         colors = colors,
         modifier = modifier,
         onOpenDetail = onOpenDetail,
-        comparisonSelection = comparisonSelection
+        comparisonSelection = comparisonSelection,
+        timestamp = item.footerTimestamp(),
+        isStale = item.isStale
     ) {
         if (entity.mediaTitle != null || entity.mediaArtist != null) {
             Text(

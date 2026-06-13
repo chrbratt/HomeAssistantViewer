@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import se.inix.homeassistantviewer.data.model.HaConnection
 import se.inix.homeassistantviewer.data.model.HaEntityState
 import se.inix.homeassistantviewer.data.model.HaHistoryRow
+import se.inix.homeassistantviewer.data.settings.CardTimestamp
 import se.inix.homeassistantviewer.data.ws.ConnectionPool
 import se.inix.homeassistantviewer.domain.history.HistoryCsvEncoder
 import se.inix.homeassistantviewer.domain.history.HistoryEntityExport
@@ -62,6 +63,9 @@ internal class EntityDetailViewModel(
     private val now: () -> Instant = Instant::now,
     customNameSource: Flow<String?> = flowOf(null),
     private val saveCustomName: (String?) -> Unit = {},
+    timestampOverrideSource: Flow<CardTimestamp?> = flowOf(null),
+    private val saveTimestampOverride: (CardTimestamp?) -> Unit = {},
+    globalCardTimestampSource: Flow<CardTimestamp> = flowOf(CardTimestamp.NONE),
     connections: StateFlow<List<HaConnection>> = MutableStateFlow(emptyList()),
     // Nullable so unit tests can instantiate the VM without wiring up a
     // real ConnectionPool. When null, [performAction] is a no-op — which
@@ -99,6 +103,18 @@ internal class EntityDetailViewModel(
     val customName: StateFlow<String?> = customNameSource
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /**
+     * The per-entity card-timestamp override (or `null` = "inherit the global
+     * setting"). Read live from the same favourites source as [customName] so
+     * the choice round-trips immediately.
+     */
+    val timestampOverride: StateFlow<CardTimestamp?> = timestampOverrideSource
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** The global card-timestamp default, used to resolve the embedded card's footer. */
+    val globalCardTimestamp: StateFlow<CardTimestamp> = globalCardTimestampSource
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CardTimestamp.NONE)
+
     private val connectionsState = connections
 
     private val _exportFeedbackEvents = MutableSharedFlow<HistoryExportFeedback>(extraBufferCapacity = 8)
@@ -110,6 +126,11 @@ internal class EntityDetailViewModel(
      */
     fun setCustomName(name: String?) {
         saveCustomName(name?.trim()?.takeIf { it.isNotEmpty() })
+    }
+
+    /** Persists the per-entity timestamp override. `null` clears it (inherit global). */
+    fun setTimestampOverride(override: CardTimestamp?) {
+        saveTimestampOverride(override)
     }
 
     /**

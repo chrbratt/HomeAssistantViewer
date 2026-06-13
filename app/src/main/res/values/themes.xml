@@ -1,4 +1,12 @@
 <resources>
 
-    <style name="Theme.HomeAssistantStuga" parent="Theme.MaterialComponents.Light" />
+    <!--
+      Pre-Compose launch theme. DayNight so the very first frame already
+      matches the system light/dark setting (Compose then applies the
+      user's palette and theme-mode). NoActionBar because the Activity is
+      a ComponentActivity that owns its own chrome via Compose.
+    -->
+    <style name="Theme.HomeAssistantStuga" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

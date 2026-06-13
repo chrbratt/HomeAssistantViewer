@@ -81,6 +81,23 @@ internal class FavoritesStore(
         )
     }
 
+    /**
+     * Sets (or clears, via `null`) the per-entity card-timestamp override.
+     * No-op if the entity is not currently favourited — we never *create* a
+     * favourite as a side-effect.
+     */
+    fun setEntityTimestampOverride(connectionId: String, entityId: String, override: CardTimestamp?) {
+        update(
+            _favorites.value.map { item ->
+                if (item is FavoriteItem.Entity &&
+                    item.connectionId == connectionId &&
+                    item.entityId == entityId
+                ) item.copy(timestampOverride = override)
+                else item
+            }
+        )
+    }
+
     /** Sets (or clears) the title on the matching divider. No-op if the id is unknown. */
     fun setDividerTitle(id: String, title: String?) {
         val normalised = title?.trim()?.takeUnless { it.isEmpty() }
